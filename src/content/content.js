@@ -137,7 +137,7 @@ function createSidebar() {
       position: fixed !important;
       top: 0 !important;
       right: 0 !important;
-      width: 33.33% !important;
+      width: 25% !important;
       height: 100vh !important;
       z-index: 2147483647 !important;
       border: none !important;
