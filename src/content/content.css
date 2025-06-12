@@ -1,0 +1,93 @@
+/* Styles for AI Assist Content Script */
+
+#ai-assist-button {
+  position: fixed !important;
+  top: 50% !important;
+  right: 20px !important;
+  transform: translateY(-50%) !important;
+  width: 56px !important;
+  height: 56px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4) !important;
+  cursor: pointer !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  transition: all 0.3s ease !important;
+  border: none !important;
+  outline: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  user-select: none !important;
+}
+
+#ai-assist-button:hover {
+  transform: translateY(-50%) scale(1.1) !important;
+  box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6) !important;
+}
+
+#ai-assist-button:active {
+  transform: translateY(-50%) scale(0.95) !important;
+}
+
+#ai-assist-button svg {
+  pointer-events: none !important;
+}
+
+/* Body adjustments when sidebar is open */
+body.ai-assist-sidebar-open {
+  margin-right: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  #ai-assist-sidebar {
+    width: 40% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #ai-assist-sidebar {
+    width: 100% !important;
+  }
+  
+  #ai-assist-button {
+    bottom: 20px !important;
+    top: auto !important;
+    right: 20px !important;
+    transform: none !important;
+  }
+  
+  #ai-assist-button:hover {
+    transform: scale(1.1) !important;
+  }
+  
+  #ai-assist-button:active {
+    transform: scale(0.95) !important;
+  }
+}
+
+/* Ensure button is always visible */
+#ai-assist-button {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+}
+
+/* Animation for button appearance */
+@keyframes ai-assist-button-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+#ai-assist-button {
+  animation: ai-assist-button-appear 0.3s ease-out !important;
+}

@@ -1,0 +1,11 @@
+- Chromeの拡張 "Chrome AI Assist" を作りたい
+- Manifestはversion 3で
+- 機能は、現在見ているページの内容をAIに読み込ませて、ChatによりAIと会話をしたい
+- API Configuration
+  - まずはAWS Bedrockに対応したい。後ほどOpenAI APIとAnthropic APIに対応したい
+  - 設定画面の詳細は添付の通り
+- AI Assistのボタンを押すと
+  - 画面の右から1/3程度がAI Assist用のWindowとして現れるようにしたい
+  - 現在のページの内容を読み込ませて
+  - "$currentURL $currentTitle を読み込みました。質問や指示があればどうぞ！"を返したい
+  - あとはChatのインターフェースを通して、ユーザーの質問とAIのレスポンスがつづく。
