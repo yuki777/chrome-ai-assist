@@ -6,26 +6,15 @@
 
 - 🔍 **ページ内容の自動抽出**: 現在のWebページの内容を自動的に読み込み
 - 💬 **AI チャット**: ページ内容について質問や指示が可能
-- 🎨 **サイドバーUI**: 画面右側1/3にチャットインターフェースを表示
+- 🎨 **サイドバーUI**: 画面右側にチャットインターフェースを表示
 - ⚙️ **複数API対応**: AWS Bedrock、OpenAI、Anthropic APIに対応
 - 🌐 **日本語対応**: UIとAI応答の完全日本語対応
 
-## 対応API
+## 対応APIプロバイダー
 
-### AWS Bedrock
-- Claude 3.5 Sonnet
-- Claude 3 Haiku
-- その他Anthropicモデル
-
-### OpenAI
-- GPT-4
-- GPT-4 Turbo
-- GPT-3.5 Turbo
-
-### Anthropic
-- Claude 3.5 Sonnet
-- Claude 3 Haiku
-- 最新のClaudeモデル
+- AWS Bedrock
+- OpenAI
+- Anthropic
 
 ## インストール
 
@@ -72,7 +61,6 @@ cd chrome-ai-assist
 2. 以下のいずれかの方法でAI Assistを起動：
    - 画面右側のフローティングボタンをクリック
    - 拡張機能アイコンから「AI Assistを開く」をクリック
-   - キーボードショートカット（Alt+A）
 
 ### 3. チャット
 
