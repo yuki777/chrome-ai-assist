@@ -137,26 +137,6 @@ body {
   }
 }
 
-.message-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.ai-message .message-avatar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.user-message .message-avatar {
-  background: #e5e7eb;
-  color: #6b7280;
-}
-
 .message-content {
   flex: 1;
   background: #f8fafc;

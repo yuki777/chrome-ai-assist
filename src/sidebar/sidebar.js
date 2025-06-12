@@ -270,12 +270,6 @@ function addUserMessage(text) {
   messageDiv.className = 'message user-message';
   
   messageDiv.innerHTML = `
-    <div class="message-avatar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </div>
     <div class="message-content">${escapeHtml(text)}</div>
   `;
 
@@ -287,38 +281,20 @@ function addUserMessage(text) {
 function addAIMessage(text, isLoading = false) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'message ai-message';
-  
+
   if (isLoading) {
-    messageDiv.innerHTML = `
-      <div class="message-avatar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="message-content">
-        <div class="loading">
-          <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <span>AIが応答を生成中...</span>
+    messageDiv.innerHTML = `<div class="message-content">
+      <div class="loading">
+        <div class="loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
+        <span>AIが応答を生成中...</span>
       </div>
-    `;
+    </div>`;
   } else {
-    messageDiv.innerHTML = `
-      <div class="message-avatar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div class="message-content">${formatMessage(text)}</div>
-    `;
+    messageDiv.innerHTML = `<div class="message-content">${formatMessage(text)}</div>`;
   }
 
   chatMessages.appendChild(messageDiv);
@@ -383,13 +359,6 @@ function addErrorMessage(error) {
   messageDiv.className = 'message ai-message';
   
   messageDiv.innerHTML = `
-    <div class="message-avatar">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2"/>
-        <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2"/>
-      </svg>
-    </div>
     <div class="message-content">
       <div class="error-message">
         <strong>エラーが発生しました：</strong><br>

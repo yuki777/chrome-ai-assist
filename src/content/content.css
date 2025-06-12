@@ -5,9 +5,9 @@
   top: 50% !important;
   right: 20px !important;
   transform: translateY(-50%) !important;
-  width: 56px !important;
-  height: 56px !important;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  width: 35px !important;
+  height: 35px !important;
+  background: #fff !important;
   border-radius: 50% !important;
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4) !important;
   cursor: pointer !important;
