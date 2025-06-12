@@ -138,28 +138,200 @@
         </div>
         <div class="input-footer">
           <span class="api-status" id="apiStatus">API設定を確認中...</span>
-          <button class="settings-btn" id="settingsBtn" title="設定">
+          <div class="action-buttons">
+            <button class="debug-btn" id="debugBtn" title="デバッグ情報">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 12l2 2 4-4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M12 6v6l4 2"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+            <button class="settings-btn" id="settingsBtn" title="設定">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="3"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Debug Panel -->
+      <div class="debug-panel" id="debugPanel" style="display: none">
+        <div class="debug-header">
+          <h3>🔍 デバッグ情報</h3>
+          <button class="debug-close-btn" id="debugCloseBtn" title="閉じる">
             <svg
-              width="14"
-              height="14"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <circle
-                cx="12"
-                cy="12"
-                r="3"
-                stroke="currentColor"
-                stroke-width="2"
-              />
               <path
-                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                d="M18 6L6 18M6 6l12 12"
                 stroke="currentColor"
                 stroke-width="2"
+                stroke-linecap="round"
               />
             </svg>
           </button>
+        </div>
+        <div class="debug-content">
+          <div class="debug-section">
+            <h4>📋 API設定</h4>
+            <div class="debug-info" id="debugApiInfo">
+              <div class="debug-item">
+                <span class="debug-label">プロバイダー:</span>
+                <span class="debug-value" id="debugProvider"
+                  >読み込み中...</span
+                >
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">モデル:</span>
+                <span class="debug-value" id="debugModel">読み込み中...</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">API状態:</span>
+                <span class="debug-value" id="debugApiStatus"
+                  >読み込み中...</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>📄 ページデータ</h4>
+            <div class="debug-info" id="debugPageInfo">
+              <div class="debug-item">
+                <span class="debug-label">URL:</span>
+                <span class="debug-value" id="debugPageUrl">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">タイトル:</span>
+                <span class="debug-value" id="debugPageTitle">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">コンテンツ長:</span>
+                <span class="debug-value" id="debugContentLength">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">読み込み時刻:</span>
+                <span class="debug-value" id="debugTimestamp">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>💬 チャット状況</h4>
+            <div class="debug-info" id="debugChatInfo">
+              <div class="debug-item">
+                <span class="debug-label">総メッセージ数:</span>
+                <span class="debug-value" id="debugMessageCount">0</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">システムプロンプト:</span>
+                <span class="debug-value expandable" id="debugSystemPrompt"
+                  >-</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>🔄 最後のAPI呼び出し</h4>
+            <div class="debug-info" id="debugLastApiCall">
+              <div class="debug-item">
+                <span class="debug-label">時刻:</span>
+                <span class="debug-value" id="debugLastCallTime">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">ステータス:</span>
+                <span class="debug-value" id="debugLastCallStatus">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">リクエスト:</span>
+                <div
+                  class="debug-value expandable code-block"
+                  id="debugLastRequest"
+                >
+                  -
+                </div>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">レスポンス:</span>
+                <div
+                  class="debug-value expandable code-block"
+                  id="debugLastResponse"
+                >
+                  -
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>📊 パフォーマンス</h4>
+            <div class="debug-info" id="debugPerformanceInfo">
+              <div class="debug-item">
+                <span class="debug-label">最後の処理時間:</span>
+                <span class="debug-value" id="debugProcessingTime">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">メモリ使用量:</span>
+                <span class="debug-value" id="debugMemoryUsage">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-actions">
+            <button class="debug-action-btn" id="debugCopyBtn">
+              📋 情報をコピー
+            </button>
+            <button class="debug-action-btn" id="debugClearBtn">
+              🗑️ チャット履歴をクリア
+            </button>
+            <button class="debug-action-btn" id="debugExportBtn">
+              💾 情報をエクスポート
+            </button>
+          </div>
         </div>
       </div>
     </div>

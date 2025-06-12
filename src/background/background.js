@@ -125,6 +125,16 @@ async function callOpenAIAPI(data, config) {
   const { openaiApiKey } = config.apiKeys;
   const model = config.selectedModel || 'gpt-4';
 
+  // OpenAI APIではsystemプロンプトをmessagesの最初に追加
+  const messages = [];
+  if (data.systemPrompt) {
+    messages.push({
+      role: 'system',
+      content: data.systemPrompt
+    });
+  }
+  messages.push(...data.messages);
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -133,7 +143,7 @@ async function callOpenAIAPI(data, config) {
     },
     body: JSON.stringify({
       model: model,
-      messages: data.messages,
+      messages: messages,
       max_tokens: 4000,
       temperature: 0.7
     })
@@ -158,6 +168,17 @@ async function callAnthropicAPI(data, config) {
   const { anthropicApiKey } = config.apiKeys;
   const model = config.selectedModel || 'claude-3-sonnet-20240229';
 
+  // Anthropic APIではsystemプロンプトは別パラメータ
+  const requestBody = {
+    model: model,
+    max_tokens: 4000,
+    messages: data.messages
+  };
+
+  if (data.systemPrompt) {
+    requestBody.system = data.systemPrompt;
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -167,11 +188,7 @@ async function callAnthropicAPI(data, config) {
       // Anthropicの警告ヘッダーを追加
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify({
-      model: model,
-      max_tokens: 4000,
-      messages: data.messages
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
