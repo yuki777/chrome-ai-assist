@@ -20,6 +20,7 @@ const sendBtn = document.getElementById('sendBtn');
 const closeBtn = document.getElementById('closeBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const debugBtn = document.getElementById('debugBtn');
+const historyBtn = document.getElementById('historyBtn');
 const apiStatus = document.getElementById('apiStatus');
 const initialMessage = document.getElementById('initialMessage');
 
@@ -28,8 +29,19 @@ const debugPanel = document.getElementById('debugPanel');
 const debugCloseBtn = document.getElementById('debugCloseBtn');
 const debugExportBtn = document.getElementById('debugExportBtn');
 
+// History Panel Elements
+const historyPanel = document.getElementById('historyPanel');
+const historyCloseBtn = document.getElementById('historyCloseBtn');
+const historyList = document.getElementById('historyList');
+const historyClearAllBtn = document.getElementById('historyClearAllBtn');
+
 // Initialize sidebar
 document.addEventListener('DOMContentLoaded', () => {
+  const textarea = document.getElementById('messageInput');
+  if (textarea && !textarea.disabled) {
+    textarea.focus();
+  }
+
   setupEventListeners();
   checkApiConfiguration();
   autoResizeTextarea();
@@ -55,6 +67,15 @@ function setupEventListeners() {
 
   // Debug action buttons
   debugExportBtn.addEventListener('click', exportDebugInfo);
+
+  // History button
+  historyBtn.addEventListener('click', toggleHistoryPanel);
+
+  // History panel close button
+  historyCloseBtn.addEventListener('click', closeHistoryPanel);
+
+  // History action buttons
+  historyClearAllBtn.addEventListener('click', clearAllHistory);
 
   // Send button
   sendBtn.addEventListener('click', sendMessage);
@@ -350,6 +371,9 @@ function handleAIResponse(response) {
       role: 'assistant',
       content: response.data
     });
+    
+    // Save chat history after AI response
+    saveChatHistory();
   }
 }
 
@@ -637,5 +661,309 @@ function trackApiCall(request, response, success, error) {
   // Keep only last 10 API calls
   if (debugInfo.apiCalls.length > 10) {
     debugInfo.apiCalls = debugInfo.apiCalls.slice(-10);
+  }
+}
+
+// =============================================================================
+// HISTORY FUNCTIONS
+// =============================================================================
+
+// Current history session ID
+let currentHistoryId = null;
+
+// Toggle history panel
+function toggleHistoryPanel() {
+  if (historyPanel.style.display === 'none' || !historyPanel.style.display) {
+    showHistoryPanel();
+  } else {
+    closeHistoryPanel();
+  }
+}
+
+// Show history panel
+async function showHistoryPanel() {
+  historyPanel.style.display = 'flex';
+  await loadHistoryList();
+}
+
+// Close history panel
+function closeHistoryPanel() {
+  historyPanel.style.display = 'none';
+}
+
+// Generate history ID based on date and URL
+function generateHistoryId(pageData) {
+  if (!pageData || !pageData.url) return null;
+  
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const urlHash = pageData.url.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+  return `${date}_${urlHash}`;
+}
+
+// Save current chat session to history
+async function saveChatHistory() {
+  if (!pageData || !chatHistory || chatHistory.length < 2) return; // システムメッセージ + 初期メッセージのみの場合は保存しない
+  
+  try {
+    const config = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
+    const historyId = generateHistoryId(pageData);
+    
+    if (!historyId) return;
+    
+    const historyItem = {
+      id: historyId,
+      pageInfo: {
+        title: pageData.title || 'タイトルなし',
+        url: pageData.url,
+        timestamp: pageData.timestamp || Date.now()
+      },
+      chatHistory: [...chatHistory], // Copy array
+      apiConfig: {
+        provider: config.apiProvider || 'unknown',
+        model: config.selectedModel || 'default'
+      },
+      savedAt: Date.now(),
+      messageCount: chatHistory.length - 1, // Exclude system message
+      lastUpdated: Date.now()
+    };
+    
+    // Get existing history list
+    const result = await chrome.storage.local.get(['chrome-ai-assist-chat-history-list']);
+    let historyList = result['chrome-ai-assist-chat-history-list'] || [];
+    
+    // Remove old entry with same ID if exists
+    historyList = historyList.filter(item => item.id !== historyId);
+    
+    // Add new entry at the beginning
+    historyList.unshift(historyItem);
+    
+    // Clean up old history (older than 1 month)
+    const oneMonthAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    historyList = historyList.filter(item => item.savedAt > oneMonthAgo);
+    
+    // Save back to storage
+    await chrome.storage.local.set({ 'chrome-ai-assist-chat-history-list': historyList });
+    
+    currentHistoryId = historyId;
+    console.log('Chat history saved:', historyId);
+    
+  } catch (error) {
+    console.error('Error saving chat history:', error);
+  }
+}
+
+// Load and display history list
+async function loadHistoryList() {
+  try {
+    const result = await chrome.storage.local.get(['chrome-ai-assist-chat-history-list']);
+    const historyList = result['chrome-ai-assist-chat-history-list'] || [];
+    
+    // Clean up old history
+    const oneMonthAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const cleanedHistoryList = historyList.filter(item => item.savedAt > oneMonthAgo);
+    
+    // Update storage if we removed any items
+    if (cleanedHistoryList.length !== historyList.length) {
+      await chrome.storage.local.set({ 'chrome-ai-assist-chat-history-list': cleanedHistoryList });
+    }
+    
+    displayHistoryList(cleanedHistoryList);
+    
+  } catch (error) {
+    console.error('Error loading history list:', error);
+    showErrorMessage('履歴の読み込みに失敗しました');
+  }
+}
+
+// Display history list in UI
+function displayHistoryList(historyData) {
+  if (!historyData || historyData.length === 0) {
+    historyList.innerHTML = `
+      <div class="history-empty">
+        <p>履歴がありません</p>
+        <small>チャットを開始すると履歴が保存されます</small>
+      </div>
+    `;
+    return;
+  }
+  
+  historyList.innerHTML = '';
+  
+  historyData.forEach(item => {
+    const historyItemDiv = createHistoryItemElement(item);
+    historyList.appendChild(historyItemDiv);
+  });
+}
+
+// Create history item element
+function createHistoryItemElement(item) {
+  const itemDiv = document.createElement('div');
+  itemDiv.className = 'history-item';
+  if (item.id === currentHistoryId) {
+    itemDiv.classList.add('active');
+  }
+  
+  const date = new Date(item.savedAt).toLocaleDateString('ja-JP');
+  const time = new Date(item.savedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  
+  itemDiv.innerHTML = `
+    <div class="history-item-header">
+      <div class="history-item-title">${escapeHtml(item.pageInfo.title)}</div>
+      <div class="history-item-actions">
+        <button class="history-item-delete-btn" data-history-id="${item.id}" title="削除">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14zM10 11v6M14 11v6" 
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="history-item-url">${escapeHtml(item.pageInfo.url)}</div>
+    <div class="history-item-info">
+      <div class="history-item-date">${date} ${time}</div>
+      <div class="history-item-stats">
+        <div class="history-item-stat">
+          💬 ${item.messageCount}
+        </div>
+        <div class="history-item-stat">
+          🔧 ${escapeHtml(item.apiConfig.provider)}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add click event to restore history
+  itemDiv.addEventListener('click', (e) => {
+    if (!e.target.closest('.history-item-delete-btn')) {
+      restoreChatHistory(item.id);
+    }
+  });
+  
+  // Add delete button event
+  const deleteBtn = itemDiv.querySelector('.history-item-delete-btn');
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deleteHistoryItem(item.id);
+  });
+  
+  return itemDiv;
+}
+
+// Restore chat history from saved session
+async function restoreChatHistory(historyId) {
+  try {
+    const result = await chrome.storage.local.get(['chrome-ai-assist-chat-history-list']);
+    const historyList = result['chrome-ai-assist-chat-history-list'] || [];
+    
+    const historyItem = historyList.find(item => item.id === historyId);
+    if (!historyItem) {
+      showErrorMessage('履歴が見つかりません');
+      return;
+    }
+    
+    // Clear current chat
+    clearCurrentChat();
+    
+    // Restore page data
+    pageData = {
+      title: historyItem.pageInfo.title,
+      url: historyItem.pageInfo.url,
+      timestamp: historyItem.pageInfo.timestamp,
+      content: '', // Content is embedded in system message
+    };
+    
+    // Update page info display
+    pageTitle.textContent = pageData.title;
+    pageUrl.textContent = pageData.url;
+    
+    // Restore chat history
+    chatHistory = [...historyItem.chatHistory];
+    currentHistoryId = historyId;
+    
+    // Rebuild chat UI
+    rebuildChatUI();
+    
+    // Close history panel
+    closeHistoryPanel();
+    
+    showSuccessMessage('履歴を復元しました');
+    
+  } catch (error) {
+    console.error('Error restoring chat history:', error);
+    showErrorMessage('履歴の復元に失敗しました');
+  }
+}
+
+// Clear current chat
+function clearCurrentChat() {
+  chatMessages.innerHTML = '';
+  chatHistory = [];
+  currentHistoryId = null;
+}
+
+// Rebuild chat UI from chat history
+function rebuildChatUI() {
+  chatMessages.innerHTML = '';
+  
+  // Skip system message (index 0) and rebuild UI from user/assistant messages
+  for (let i = 1; i < chatHistory.length; i++) {
+    const message = chatHistory[i];
+    
+    if (message.role === 'user') {
+      addUserMessage(message.content);
+    } else if (message.role === 'assistant') {
+      addAIMessage(message.content);
+    }
+  }
+  
+  scrollToBottom();
+}
+
+// Delete specific history item
+async function deleteHistoryItem(historyId) {
+  if (!confirm('この履歴を削除しますか？')) return;
+  
+  try {
+    const result = await chrome.storage.local.get(['chrome-ai-assist-chat-history-list']);
+    let historyList = result['chrome-ai-assist-chat-history-list'] || [];
+    
+    // Remove the item
+    historyList = historyList.filter(item => item.id !== historyId);
+    
+    // Save back to storage
+    await chrome.storage.local.set({ 'chrome-ai-assist-chat-history-list': historyList });
+    
+    // If deleted item was current session, clear current history ID
+    if (historyId === currentHistoryId) {
+      currentHistoryId = null;
+    }
+    
+    // Reload history list
+    await loadHistoryList();
+    
+    showSuccessMessage('履歴を削除しました');
+    
+  } catch (error) {
+    console.error('Error deleting history item:', error);
+    showErrorMessage('履歴の削除に失敗しました');
+  }
+}
+
+// Clear all history
+async function clearAllHistory() {
+  if (!confirm('すべての履歴を削除しますか？この操作は取り消せません。')) return;
+  
+  try {
+    await chrome.storage.local.set({ 'chrome-ai-assist-chat-history-list': [] });
+    currentHistoryId = null;
+    
+    // Reload history list
+    await loadHistoryList();
+    
+    showSuccessMessage('すべての履歴を削除しました');
+    
+  } catch (error) {
+    console.error('Error clearing all history:', error);
+    showErrorMessage('履歴の削除に失敗しました');
   }
 }

@@ -116,7 +116,6 @@
             id="messageInput"
             placeholder="質問や指示を入力してください..."
             rows="1"
-            disabled
           ></textarea>
           <button id="sendBtn" class="send-btn" disabled title="送信">
             <svg
@@ -139,6 +138,24 @@
         <div class="input-footer">
           <span class="api-status" id="apiStatus">API設定を確認中...</span>
           <div class="action-buttons">
+            <button class="history-btn" id="historyBtn" title="履歴">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style="display: block; margin: auto"
+              >
+                <path
+                  d="M3 3v5h5M3.05 13a9 9 0 1 0 3.54-7.1L3 10"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
             <button class="debug-btn" id="debugBtn" title="デバッグ情報">
               <svg
                 width="16"
@@ -197,6 +214,42 @@
               </svg>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+      <div class="history-panel" id="historyPanel" style="display: none">
+        <div class="history-header">
+          <h3>📝 チャット履歴</h3>
+          <button class="history-close-btn" id="historyCloseBtn" title="閉じる">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="history-content">
+          <div class="history-list" id="historyList">
+            <div class="history-empty">
+              <p>履歴がありません</p>
+              <small>チャットを開始すると履歴が保存されます</small>
+            </div>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="history-action-btn" id="historyClearAllBtn">
+            🗑️ 全履歴削除
+          </button>
         </div>
       </div>
 
