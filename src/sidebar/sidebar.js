@@ -25,8 +25,6 @@ const initialMessage = document.getElementById('initialMessage');
 // Debug Panel Elements
 const debugPanel = document.getElementById('debugPanel');
 const debugCloseBtn = document.getElementById('debugCloseBtn');
-const debugCopyBtn = document.getElementById('debugCopyBtn');
-const debugClearBtn = document.getElementById('debugClearBtn');
 const debugExportBtn = document.getElementById('debugExportBtn');
 
 // Initialize sidebar
@@ -55,8 +53,6 @@ function setupEventListeners() {
   debugCloseBtn.addEventListener('click', closeDebugPanel);
 
   // Debug action buttons
-  debugCopyBtn.addEventListener('click', copyDebugInfo);
-  debugClearBtn.addEventListener('click', clearChatHistory);
   debugExportBtn.addEventListener('click', exportDebugInfo);
 
   // Send button
@@ -492,108 +488,6 @@ function setupExpandableElements() {
   });
 }
 
-// Copy debug info to clipboard
-async function copyDebugInfo() {
-  try {
-    const config = await chrome.storage.local.get(['apiProvider', 'apiKeys', 'selectedModel']);
-    
-    const debugText = `🔍 Chrome AI Assist - デバッグ情報
-生成日時: ${new Date().toLocaleString()}
-
-📋 API設定:
-- プロバイダー: ${config.apiProvider || '未設定'}
-- モデル: ${config.selectedModel || 'デフォルト'}
-- API状態: ${isApiConfigured ? '接続済み' : '未設定'}
-
-📄 ページデータ:
-- URL: ${pageData?.url || '-'}
-- タイトル: ${pageData?.title || '-'}
-- コンテンツ長: ${pageData?.content ? `${pageData.content.length.toLocaleString()}文字` : '-'}
-- 読み込み時刻: ${pageData?.timestamp ? new Date(pageData.timestamp).toLocaleString() : '-'}
-
-💬 チャット状況:
-- 総メッセージ数: ${chatHistory.length}
-- システムプロンプト: ${chatHistory.length > 0 ? chatHistory[0].content.substring(0, 200) + '...' : '-'}
-
-🔄 最後のAPI呼び出し:
-- 時刻: ${debugInfo.lastApiCall ? new Date(debugInfo.lastApiCall.timestamp).toLocaleString() : '-'}
-- ステータス: ${debugInfo.lastApiCall ? (debugInfo.lastApiCall.success ? '成功' : 'エラー') : '-'}
-
-📊 パフォーマンス:
-- 最後の処理時間: ${debugInfo.performanceMetrics.lastProcessingTime || '-'}
-- メモリ使用量: ${getMemoryUsage()}
-
----
-Chrome AI Assist v1.0
-`;
-
-    await navigator.clipboard.writeText(debugText);
-    showSuccessMessage('デバッグ情報をクリップボードにコピーしました');
-  } catch (error) {
-    console.error('Error copying debug info:', error);
-    showErrorMessage('クリップボードへのコピーに失敗しました');
-  }
-}
-
-// Clear chat history
-function clearChatHistory() {
-  if (confirm('チャット履歴をクリアしますか？この操作は元に戻せません。')) {
-    chatHistory = [];
-    chatMessages.innerHTML = '';
-    
-    // Re-add initial message if page data exists
-    if (pageData) {
-      const initialText = `${pageData.url} ${pageData.title} を読み込みました。質問や指示があればどうぞ！`;
-      chatHistory = [
-        {
-          role: 'system',
-          content: `あなたは現在開いているWebページの内容を理解し、分析できるAIアシスタントです。
-
-【現在のページ情報】
-- URL: ${pageData.url}
-- タイトル: ${pageData.title}
-- ページコンテンツ: 
-${pageData.content}
-
-【あなたの役割】
-1. 上記のページコンテンツを正確に理解し、記憶してください
-2. ユーザーの質問に対して、ページの内容に基づいた正確な回答を提供してください
-3. ページに記載されていない情報については、その旨を明確に伝えてください
-4. 必要に応じて、ページの特定の部分を引用して回答してください
-
-【重要な指示】
-- ページの内容から逸脱した推測や一般的な知識での回答は避けてください
-- ユーザーが「このページ」「この記事」と言った場合は、必ず上記のページコンテンツを参照してください
-- 回答する際は、どの部分を参照したかを明示してください
-- すべての回答は日本語で行ってください`
-        },
-        {
-          role: 'assistant',
-          content: initialText
-        }
-      ];
-      
-      // Add initial message back to UI
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message ai-message initial-message';
-      messageDiv.id = 'initialMessage';
-      messageDiv.innerHTML = `
-        <div class="message-avatar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="message-content">${initialText}</div>
-      `;
-      chatMessages.appendChild(messageDiv);
-    }
-    
-    updateDebugInfo();
-    showSuccessMessage('チャット履歴をクリアしました');
-  }
-}
 
 // Export debug info as JSON
 async function exportDebugInfo() {

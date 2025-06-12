@@ -84,13 +84,13 @@ async function handleAIRequest(data, sendResponse) {
 // AWS Bedrock API call
 async function callBedrockAPI(data, config) {
   const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = config.apiKeys;
-  const model = config.selectedModel || 'anthropic.claude-sonnet-4-20250514-v1:0';
+  const model = config.selectedModel || 'anthropic.claude-opus-4-20250514-v1:0';
 
   // AWS Signature V4 implementation would go here
   // For now, this is a placeholder structure
   const requestBody = {
     anthropic_version: "bedrock-2023-05-31",
-    max_tokens: 4000,
+    // max_tokens: 4000,
     messages: data.messages,
     system: data.systemPrompt || "You are a helpful AI assistant analyzing web content."
   };
@@ -123,7 +123,7 @@ async function callBedrockAPI(data, config) {
 // OpenAI API call (placeholder)
 async function callOpenAIAPI(data, config) {
   const { openaiApiKey } = config.apiKeys;
-  const model = config.selectedModel || 'gpt-4';
+  const model = config.selectedModel || 'gpt-4.1';
 
   // OpenAI APIではsystemプロンプトをmessagesの最初に追加
   const messages = [];
@@ -144,7 +144,7 @@ async function callOpenAIAPI(data, config) {
     body: JSON.stringify({
       model: model,
       messages: messages,
-      max_tokens: 4000,
+      // max_tokens: 4000,
       temperature: 0.7
     })
   });
@@ -166,12 +166,12 @@ async function callOpenAIAPI(data, config) {
 // Anthropic API call (placeholder)
 async function callAnthropicAPI(data, config) {
   const { anthropicApiKey } = config.apiKeys;
-  const model = config.selectedModel || 'claude-3-sonnet-20240229';
+  const model = config.selectedModel || 'claude-4-opus-20250514';
 
   // Anthropic APIではsystemプロンプトは別パラメータ
   const requestBody = {
     model: model,
-    max_tokens: 4000,
+    // max_tokens: 4000,
     messages: data.messages
   };
 
