@@ -156,11 +156,23 @@ async function loadSettings() {
       if (keys.anthropicApiKey) anthropicApiKey.value = keys.anthropicApiKey;
     }
 
-    // Set Selected Model
+    // Set Selected Model - with validation for old/unsupported models
     if (settings.selectedModel) {
       const provider = settings.apiProvider;
       if (provider === 'bedrock') {
-        bedrockModel.value = settings.selectedModel;
+        // Check if the stored model is valid/supported
+        const validBedrockModels = [
+          'us.anthropic.claude-opus-4-20250514-v1:0',
+          'us.anthropic.claude-sonnet-4-20250514-v1:0'
+        ];
+        
+        if (validBedrockModels.includes(settings.selectedModel)) {
+          bedrockModel.value = settings.selectedModel;
+        } else {
+          // Set to default if invalid/old model
+          bedrockModel.value = 'us.anthropic.claude-opus-4-20250514-v1:0';
+          console.warn('Invalid Bedrock model detected, reset to default:', settings.selectedModel);
+        }
       } else if (provider === 'openai') {
         openaiModel.value = settings.selectedModel;
       } else if (provider === 'anthropic') {
@@ -174,7 +186,6 @@ async function loadSettings() {
     }
 
     // Set other options
-
     if (settings.budgetTokens) {
       budgetSlider.value = settings.budgetTokens;
       updateBudgetValue();

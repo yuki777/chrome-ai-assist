@@ -2,6 +2,12 @@
 
 ## 現在の作業フォーカス
 
+### AWS Bedrock認証実装 (完了)
+- AWS Signature V4認証の完全実装により「Missing Authentication Token」エラーを解決
+- AWS Access Key, Secret Key, Session Token, Regionを使用した正しい認証ヘッダー生成
+- sha256, hmacSha256等の暗号化関数をWeb Crypto APIで実装
+- 利用可能な最新Bedrockモデル（Claude 3.5 Sonnet v2, Claude 3.5 Haiku等）に更新
+
 ### システムプロンプト改善 & API統合修正 (完了)
 - AIがページコンテンツを正確に理解し応答するための詳細なプロンプト実装
 - ページ内容に基づいた正確な回答を提供するよう明確に指示
@@ -10,7 +16,7 @@
 - **重要修正**: OpenAI/AnthropicのAPI呼び出しでシステムプロンプトが正常に送信されるよう修正
   - OpenAI: systemメッセージをmessages配列の最初に追加
   - Anthropic: systemパラメータとして送信
-  - Bedrock: 既存実装のまま（system パラメータ使用）
+  - Bedrock: systemパラメータ使用（認証追加で完全動作）
 
 ### デバッグ情報表示機能 (完了)
 - AI Chat画面にデバッグパネルを追加

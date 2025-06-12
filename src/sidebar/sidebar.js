@@ -103,7 +103,7 @@ function initializeChat() {
   pageUrl.textContent = pageData.url || '';
 
   // Create initial AI message
-  const initialText = `${pageData.url} ${pageData.title} を読み込みました。質問や指示があればどうぞ！`;
+  const initialText = `このページについて質問や指示があればどうぞ！`;
   
   // Update initial message
   setTimeout(() => {
