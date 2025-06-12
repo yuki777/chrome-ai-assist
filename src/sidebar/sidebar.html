@@ -141,39 +141,46 @@
           <div class="action-buttons">
             <button class="debug-btn" id="debugBtn" title="デバッグ情報">
               <svg
-                width="14"
-                height="14"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
+                style="display: block; margin: auto"
               >
-                <path
-                  d="M9 12l2 2 4-4"
+                <g
                   stroke="currentColor"
                   stroke-width="2"
+                  fill="none"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                />
-                <path
-                  d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M12 6v6l4 2"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
+                >
+                  <!-- 胴体 -->
+                  <ellipse cx="12" cy="12" rx="5" ry="7" />
+                  <!-- 頭部 -->
+                  <circle cx="12" cy="4.5" r="2.5" />
+                  <!-- 触角 -->
+                  <line x1="10.5" y1="2" x2="9" y2="0.5" />
+                  <line x1="13.5" y1="2" x2="15" y2="0.5" />
+                  <!-- 左脚 -->
+                  <line x1="7" y1="9" x2="3" y2="6" />
+                  <line x1="7" y1="13" x2="2" y2="13" />
+                  <line x1="7" y1="17" x2="3" y2="20" />
+                  <!-- 右脚 -->
+                  <line x1="17" y1="9" x2="21" y2="6" />
+                  <line x1="17" y1="13" x2="22" y2="13" />
+                  <line x1="17" y1="17" x2="21" y2="20" />
+                </g>
               </svg>
             </button>
             <button class="settings-btn" id="settingsBtn" title="設定">
               <svg
-                width="14"
-                height="14"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
+                style="display: block; margin: auto"
               >
                 <circle
                   cx="12"
