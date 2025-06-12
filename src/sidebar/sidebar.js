@@ -4,6 +4,7 @@ let pageData = null;
 let chatHistory = [];
 let isApiConfigured = false;
 let isComposing = false; // IME変換状態を管理
+let isApiRequestInProgress = false; // APIリクエスト中フラグ
 let debugInfo = {
   lastApiCall: null,
   apiCalls: [],
@@ -74,7 +75,10 @@ function setupEventListeners() {
     }
   });
 
-  messageInput.addEventListener('input', autoResizeTextarea);
+  messageInput.addEventListener('input', () => {
+    autoResizeTextarea();
+    updateSendButtonState();
+  });
 
   // Listen for messages from content script
   window.addEventListener('message', handleMessage);
@@ -180,7 +184,11 @@ async function checkApiConfiguration() {
 // Send message
 function sendMessage() {
   const message = messageInput.value.trim();
-  if (!message || !isApiConfigured) return;
+  if (!message || !isApiConfigured || isApiRequestInProgress) return;
+
+  // Set API request in progress
+  isApiRequestInProgress = true;
+  updateSendButtonState();
 
   // Record start time for performance tracking
   const startTime = performance.now();
@@ -279,6 +287,10 @@ function addAIMessage(text, isLoading = false) {
 
 // Handle AI response
 function handleAIResponse(response) {
+  // Reset API request in progress flag
+  isApiRequestInProgress = false;
+  updateSendButtonState();
+
   // Calculate processing time
   if (debugInfo.performanceMetrics.lastStartTime) {
     const endTime = performance.now();
@@ -385,6 +397,33 @@ function autoResizeTextarea() {
 // Scroll to bottom
 function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Update send button state based on current conditions
+function updateSendButtonState() {
+  const hasMessage = messageInput.value.trim().length > 0;
+  const canSend = isApiConfigured && !isApiRequestInProgress && hasMessage;
+  
+  sendBtn.disabled = !canSend;
+  
+  // Update button appearance based on state
+  if (isApiRequestInProgress) {
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    sendBtn.title = 'AI応答待ち中...';
+  } else if (!isApiConfigured) {
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    sendBtn.title = 'API設定が必要です';
+  } else if (!hasMessage) {
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    sendBtn.title = 'メッセージを入力してください';
+  } else {
+    sendBtn.style.opacity = '1';
+    sendBtn.style.cursor = 'pointer';
+    sendBtn.title = '送信';
+  }
 }
 
 // Update API status when storage changes
