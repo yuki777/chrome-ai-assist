@@ -6,7 +6,7 @@
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Service       │    │   Content       │    │   UI Components │
-│   Worker        │◄──►│   Scripts       │◄──►│   (Popup/Side)  │
+│   Worker        │◄──►│   Scripts       │◄──►│   (Sidebar)     │
 │   (Background)  │    │   (Web Page)    │    │   (Extension)   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
@@ -53,9 +53,7 @@ const providers = {
 
 ### データフロー
 ```
-User Action (Popup) 
-    ↓
-Runtime Message
+User Action (Extension Icon Click)
     ↓
 Background Service Worker
     ↓
@@ -63,11 +61,13 @@ Content Script Injection
     ↓
 DOM Manipulation & Page Analysis
     ↓
+Sidebar Creation & Initialization
+    ↓
 AI API Call
     ↓
 Response Processing
     ↓
-UI Update (Sidebar/Popup)
+UI Update (Sidebar)
 ```
 
 ### 状態同期パターン

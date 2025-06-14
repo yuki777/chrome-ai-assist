@@ -38,8 +38,8 @@ cd chrome-ai-assist
 
 ### 1. API設定
 
-1. 拡張機能アイコンをクリック
-2. 「設定」ボタンをクリック
+1. 拡張機能アイコンを右クリック
+2. 「オプション」を選択
 3. 使用したいAPI Providerを選択
 4. 必要な認証情報を入力：
 
@@ -60,7 +60,7 @@ cd chrome-ai-assist
 1. Webページを開く
 2. 以下のいずれかの方法でAI Assistを起動：
    - 画面右側のフローティングボタンをクリック
-   - 拡張機能アイコンから「AI Assistを開く」をクリック
+   - 拡張機能アイコンをクリック
 
 ### 3. チャット
 
@@ -84,10 +84,6 @@ chrome-ai-assist/
 │   │   ├── sidebar.html        # チャットUI
 │   │   ├── sidebar.js          # チャット機能
 │   │   └── sidebar.css         # チャットスタイル
-│   ├── popup/
-│   │   ├── popup.html          # ポップアップUI
-│   │   ├── popup.js            # ポップアップ機能
-│   │   └── popup.css           # ポップアップスタイル
 │   └── options/
 │       ├── options.html        # 設定画面
 │       ├── options.js          # 設定ロジック
@@ -109,9 +105,8 @@ chrome-ai-assist/
 
 1. **Background Script**: Chrome DevTools > Extensions > Chrome AI Assist > Background page
 2. **Content Script**: 任意のページでF12 > Console
-3. **Popup**: 拡張機能アイコンを右クリック > 「ポップアップを検証」
-4. **Options**: 設定ページでF12
-5. **Sidebar**: サイドバー内で右クリック > 「検証」
+3. **Options**: 設定ページでF12
+4. **Sidebar**: サイドバー内で右クリック > 「検証」
 
 ### 開発時の注意点
 

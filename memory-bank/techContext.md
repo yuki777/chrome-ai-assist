@@ -18,9 +18,9 @@
    - DOM操作
    - ページ情報抽出
 
-3. **Popup**: `src/popup/`
-   - メインUI (popup.html, popup.js, popup.css)
-   - 簡単なAI操作インターフェース
+3. **Sidebar**: `src/sidebar/`
+   - メインUI (sidebar.html, sidebar.js, sidebar.css)
+   - チャット形式のAI操作インターフェース
 
 4. **Options**: `src/options/`
    - 設定画面 (options.html, options.js, options.css)
@@ -40,9 +40,8 @@ chrome-ai-assist/
 ├── src/
 │   ├── background/        # Service Worker
 │   ├── content/          # Content Scripts
-│   ├── popup/            # ポップアップUI
-│   ├── options/          # 設定画面
-│   └── sidebar/          # サイドバーUI
+│   ├── sidebar/          # メインUI（チャット）
+│   └── options/          # 設定画面
 └── memory-bank/          # プロジェクト文書
 ```
 

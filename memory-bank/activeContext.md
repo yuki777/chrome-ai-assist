@@ -2,6 +2,15 @@
 
 ## 現在の作業フォーカス
 
+### popup ファイル削除によるコード整理 (2025-01-06 完了)
+- **課題**: sidebarを使うようになったため、popup(popup.html, popup.js, popup.css)が不要になった
+- **調査結果**: manifest.jsonでdefault_popupが設定されておらず、拡張機能アイコンクリックでsidebarが直接開く仕組み
+- **実施内容**: 
+  - `src/popup/` ディレクトリとすべてのファイルを削除
+  - README.mdの使用方法とプロジェクト構造を更新
+  - memory-bank/techContext.mdとsystemPatterns.mdのアーキテクチャ情報を更新
+- **効果**: 約3KBのコード削減、プロジェクト構造の簡素化
+
 ### initializeChat()システムプロンプト改善 (2025-01-06 完了)
 - **問題解決**: ページ内容に関連した追加質問（MediaConvertコスト調査等）にAIが過度に制限的
 - **改善内容**: より柔軟で実用的なシステムプロンプトに全面改修
@@ -39,11 +48,18 @@
 
 ### 現在のプロジェクト状態
 - **基本機能**: 実装済み・動作可能
-- **UI/UX**: 基本的なインターフェース完成
+- **UI/UX**: sidebar中心の統一されたインターフェース
 - **AI統合**: 3プロバイダー対応済み
 - **セキュリティ**: 基本的な対策実装済み
+- **コード整理**: 不要なpopup関連ファイルを削除済み
 
 ## 最近の変更・発見
+
+### popupファイル削除 (2025-01-06)
+- **削除対象**: `src/popup/popup.html`, `src/popup/popup.js`, `src/popup/popup.css`
+- **理由**: sidebar実装により不要になった
+- **影響**: なし（現在使用されていない状態だった）
+- **更新箇所**: README.md, techContext.md, systemPatterns.md
 
 ### コード構造の理解
 1. **マルチプロバイダー対応**: AWS Bedrock、OpenAI、Anthropic Claude
