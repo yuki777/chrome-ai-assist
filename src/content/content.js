@@ -88,6 +88,12 @@ function extractPageContent() {
     content = bodyClone.innerText.trim();
   }
 
+  // 連続した改行は1つにまとめる
+  //  - \n\n => \n
+  //  - \n \n => \n
+  //  - \n  \n => \n
+  content = content.replace(/\n{2,}/g, '\n').replace(/\n\s*\n/g, '\n').trim();
+
   // Limit content length to prevent API overload
   if (content.length > 40000) {
     content = content.substring(0, 40000) + '...';
