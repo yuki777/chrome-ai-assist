@@ -89,8 +89,8 @@ function extractPageContent() {
   }
 
   // Limit content length to prevent API overload
-  if (content.length > 10000) {
-    content = content.substring(0, 10000) + '...';
+  if (content.length > 40000) {
+    content = content.substring(0, 40000) + '...';
   }
 
   return {
