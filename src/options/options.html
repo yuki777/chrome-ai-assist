@@ -79,20 +79,12 @@
 
             <div class="form-group">
               <label for="awsAccessKey">AWS Access Key</label>
-              <input
-                type="password"
-                id="awsAccessKey"
-                placeholder="••••••••••••••••"
-              />
+              <input type="password" id="awsAccessKey" />
             </div>
 
             <div class="form-group">
               <label for="awsSecretKey">AWS Secret Key</label>
-              <input
-                type="password"
-                id="awsSecretKey"
-                placeholder="••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-              />
+              <input type="password" id="awsSecretKey" />
             </div>
 
             <div class="form-group">
@@ -188,21 +180,6 @@
                 nuanced reasoning
               </div>
             </div>
-
-            <div class="model-info">
-              <div class="feature-list">
-                <div class="feature">✓ Supports images</div>
-                <div class="feature">✓ Supports browser use</div>
-                <div class="feature">✓ Supports prompt caching</div>
-              </div>
-              <div class="pricing-info">
-                <div>Max output: 8,192 tokens</div>
-                <div>Input price: $3.00/million tokens</div>
-                <div>Cache writes price: $3.75/million tokens</div>
-                <div>Cache reads price: $0.30/million tokens</div>
-                <div>Output price: $15.00/million tokens</div>
-              </div>
-            </div>
           </section>
 
           <!-- OpenAI Configuration -->
@@ -213,11 +190,7 @@
           >
             <div class="form-group">
               <label for="openaiApiKey">OpenAI API Key</label>
-              <input
-                type="password"
-                id="openaiApiKey"
-                placeholder="••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-              />
+              <input type="password" id="openaiApiKey" />
               <div class="info-text">
                 This key is stored locally and only used to make API requests
                 from this extension.
@@ -231,20 +204,6 @@
                 <option value="gpt-4o">gpt-4o</option>
               </select>
             </div>
-
-            <div class="model-info">
-              <div class="feature-list">
-                <div class="feature">✓ Supports images</div>
-                <div class="feature">✓ Supports browser use</div>
-                <div class="feature">✓ Supports prompt caching</div>
-              </div>
-              <div class="pricing-info">
-                <div>Max output: 32,768 tokens</div>
-                <div>Input price: $2.00/million tokens</div>
-                <div>Cache reads price: $0.50/million tokens</div>
-                <div>Output price: $8.00/million tokens</div>
-              </div>
-            </div>
           </section>
 
           <!-- Anthropic Configuration -->
@@ -255,11 +214,7 @@
           >
             <div class="form-group">
               <label for="anthropicApiKey">Anthropic API Key</label>
-              <input
-                type="password"
-                id="anthropicApiKey"
-                placeholder="••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••"
-              />
+              <input type="password" id="anthropicApiKey" />
             </div>
 
             <div class="checkbox-group">
@@ -324,21 +279,6 @@
                 nuanced reasoning
               </div>
             </div>
-
-            <div class="model-info">
-              <div class="feature-list">
-                <div class="feature">✓ Supports images</div>
-                <div class="feature">✓ Supports browser use</div>
-                <div class="feature">✓ Supports prompt caching</div>
-              </div>
-              <div class="pricing-info">
-                <div>Max output: 8,192 tokens</div>
-                <div>Input price: $3.00/million tokens</div>
-                <div>Cache writes price: $3.75/million tokens</div>
-                <div>Cache reads price: $0.30/million tokens</div>
-                <div>Output price: $15.00/million tokens</div>
-              </div>
-            </div>
           </section>
         </div>
 
@@ -346,11 +286,7 @@
         <section class="config-section">
           <h2>Custom Instructions</h2>
           <div class="form-group">
-            <textarea
-              id="customInstructions"
-              placeholder="ユーザーへの出力は常に日本語でお願いします"
-              rows="6"
-            ></textarea>
+            <textarea id="customInstructions" rows="6"></textarea>
             <div class="info-text">
               These instructions are added to the end of the system prompt sent
               with every request.
