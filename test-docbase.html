@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocBase テストページ</title>
+</head>
+<body>
+    <h1>DocBase MCP テスト</h1>
+    <p>このページは DocBase MCP サーバーとの連携をテストするためのページです。</p>
+    
+    <h2>テスト手順</h2>
+    <ol>
+        <li>Chrome AI Assist 拡張のアイコンをクリック</li>
+        <li>サイドバーが開いたら、デバッグボタン（虫のアイコン）をクリック</li>
+        <li>「MCP接続状態」セクションを確認</li>
+    </ol>
+    
+    <h2>期待される結果</h2>
+    <ul>
+        <li>Native Host: 接続済み（緑色）</li>
+        <li>DocBase サーバー: 接続済み（緑色）</li>
+        <li>利用可能ツール: DocBase MCPサーバーのツール一覧</li>
+    </ul>
+    
+    <script>
+        // URLにdocbase.ioを含むように見せかけるため、URLを変更
+        // 実際のテストでは本物のDocBaseページを使用してください
+        console.log('DocBase テストページが読み込まれました');
+        console.log('現在のURL:', window.location.href);
+    </script>
+</body>
+</html>

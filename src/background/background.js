@@ -1,5 +1,7 @@
 // Background Service Worker for Chrome AI Assist
 
+import { mcpClient } from './mcpClient.js';
+
 // Message listener for communication between content script and extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getPageContent') {
@@ -15,6 +17,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'callAI') {
     handleAIRequest(request.data, sendResponse);
     return true; // Will respond asynchronously
+  }
+
+  // MCP-related messages
+  if (request.action === 'mcpConnect') {
+    mcpClient.connectToServer(request.server)
+      .then(result => sendResponse({ success: result }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'mcpListTools') {
+    mcpClient.listTools(request.server)
+      .then(tools => sendResponse({ success: true, tools }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'mcpCallTool') {
+    mcpClient.callTool(request.server, request.tool, request.args)
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.action === 'mcpProcessContent') {
+    handleMCPContentProcessing(request.content, request.options, sendResponse);
+    return true;
   }
 });
 
@@ -47,6 +76,24 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 
 // 既存のメッセージリスナーは削除（重複防止のため）
+
+// Handle MCP content processing
+async function handleMCPContentProcessing(content, options, sendResponse) {
+  try {
+    // Check if the URL is from DocBase
+    if (content.url && content.url.includes('docbase.io')) {
+      const processedContent = await mcpClient.processWebContent('docbase', content, options);
+      sendResponse({ success: true, content: processedContent });
+    } else {
+      // Return original content if not a supported MCP server
+      sendResponse({ success: true, content: content });
+    }
+  } catch (error) {
+    console.error('MCP processing error:', error);
+    // Fallback to original content on error
+    sendResponse({ success: true, content: content });
+  }
+}
 
 // Handle AI API requests
 async function handleAIRequest(data, sendResponse) {

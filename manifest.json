@@ -1,16 +1,4 @@
 {
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icons/icon16.png",
-        "icons/icon48.png",
-        "icons/icon128.png"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ],
   "manifest_version": 3,
   "name": "Chrome AI Assist",
   "version": "1.0.0",
@@ -18,13 +6,15 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "src/background/background.js"
+    "service_worker": "src/background/background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -56,7 +46,10 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/sidebar/*"
+        "src/sidebar/*",
+        "icons/icon16.png",
+        "icons/icon48.png",
+        "icons/icon128.png"
       ],
       "matches": [
         "<all_urls>"

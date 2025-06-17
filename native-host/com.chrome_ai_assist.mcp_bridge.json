@@ -1,0 +1,9 @@
+{
+  "name": "com.chrome_ai_assist.mcp_bridge",
+  "description": "Chrome AI Assist MCP Bridge",
+  "path": "/Users/adachi/git/chrome-ai-assist/native-host/host.js",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://YOUR_EXTENSION_ID_HERE/"
+  ]
+}

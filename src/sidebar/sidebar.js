@@ -8,7 +8,12 @@ let isApiRequestInProgress = false; // APIリクエスト中フラグ
 let debugInfo = {
   lastApiCall: null,
   apiCalls: [],
-  performanceMetrics: {}
+  performanceMetrics: {},
+  mcpStatus: {
+    nativeHost: false,
+    docbase: false,
+    tools: []
+  }
 };
 
 // DOM Elements
@@ -107,8 +112,10 @@ function setupEventListeners() {
 
 // Handle messages from content script
 function handleMessage(event) {
+  console.log('📨 Message received:', event.data.type, event.data);
   if (event.data.type === 'INIT') {
     pageData = event.data.data;
+    console.log('📄 Page data received:', pageData);
     initializeChat();
   } else if (event.data.type === 'AI_RESPONSE') {
     handleAIResponse(event.data.data);
@@ -116,12 +123,22 @@ function handleMessage(event) {
 }
 
 // Initialize chat with page content
-function initializeChat() {
+async function initializeChat() {
   if (!pageData) return;
 
   // Update page info
   pageTitle.textContent = pageData.title || 'タイトルなし';
   pageUrl.textContent = pageData.url || '';
+
+  // Check if this is a DocBase page and try MCP processing
+  // For testing: also trigger on Google search pages containing 'asdf'
+  if (pageData.url && (pageData.url.includes('docbase.io') || 
+      (pageData.url.includes('google.com') && pageData.url.includes('asdf')))) {
+    console.log('🔌 MCP processing triggered for URL:', pageData.url);
+    tryMCPProcessing();
+  } else {
+    console.log('⚠️ MCP processing skipped for URL:', pageData.url);
+  }
 
   // Create initial AI message
   const initialText = `このページについて質問や指示があればどうぞ！ページ内容に関連した質問にもお答えできます。`;
@@ -465,6 +482,7 @@ function toggleDebugPanel() {
 async function showDebugPanel() {
   debugPanel.style.display = 'flex';
   await updateDebugInfo();
+  updateMCPDebugInfo();
   setupExpandableElements();
 }
 
@@ -540,6 +558,92 @@ function setupExpandableElements() {
       this.classList.toggle('expanded');
     });
   });
+}
+
+// Try MCP processing for DocBase pages
+async function tryMCPProcessing() {
+  try {
+    console.log('🚀 Attempting MCP processing for DocBase page...');
+    console.log('📍 Current URL:', pageData?.url);
+    
+    // Try to connect to DocBase MCP server
+    const connectResponse = await chrome.runtime.sendMessage({
+      action: 'mcpConnect',
+      server: 'docbase'
+    });
+    
+    if (connectResponse.success) {
+      debugInfo.mcpStatus.nativeHost = true;
+      debugInfo.mcpStatus.docbase = true;
+      console.log('Successfully connected to DocBase MCP server');
+      
+      // List available tools
+      const toolsResponse = await chrome.runtime.sendMessage({
+        action: 'mcpListTools',
+        server: 'docbase'
+      });
+      
+      if (toolsResponse.success && toolsResponse.tools) {
+        // Handle both direct tools array and nested tools object
+        const tools = toolsResponse.tools.tools || toolsResponse.tools;
+        debugInfo.mcpStatus.tools = tools;
+        console.log('Available MCP tools:', tools);
+        console.log('Tools response structure:', toolsResponse);
+        
+        // Update debug panel immediately
+        updateMCPDebugInfo();
+        
+        // Process the content with MCP
+        const processResponse = await chrome.runtime.sendMessage({
+        action: 'mcpProcessContent',
+        content: pageData,
+        options: {
+          query: pageData.title
+        }
+        });
+
+        if (processResponse.success && processResponse.content) {
+        // Update pageData with MCP-processed content if available
+        pageData = { ...pageData, ...processResponse.content };
+        console.log('Content processed with MCP');
+        }
+
+      }
+    }
+  } catch (error) {
+    console.error('MCP processing failed:', error);
+    debugInfo.mcpStatus.nativeHost = false;
+    debugInfo.mcpStatus.docbase = false;
+  }
+  
+  // Update debug panel
+  updateMCPDebugInfo();
+}
+
+// Update MCP status in debug panel
+function updateMCPDebugInfo() {
+  const mcpStatusEl = document.getElementById('debugMCPStatus');
+  const docbaseStatusEl = document.getElementById('debugDocbaseStatus');
+  const mcpToolsEl = document.getElementById('debugMCPTools');
+  
+  if (mcpStatusEl) {
+    mcpStatusEl.textContent = debugInfo.mcpStatus.nativeHost ? '接続済み' : '未接続';
+    mcpStatusEl.style.color = debugInfo.mcpStatus.nativeHost ? '#4CAF50' : '#f44336';
+  }
+  
+  if (docbaseStatusEl) {
+    docbaseStatusEl.textContent = debugInfo.mcpStatus.docbase ? '接続済み' : '未接続';
+    docbaseStatusEl.style.color = debugInfo.mcpStatus.docbase ? '#4CAF50' : '#f44336';
+  }
+  
+  if (mcpToolsEl) {
+    if (debugInfo.mcpStatus.tools.length > 0) {
+      const toolNames = debugInfo.mcpStatus.tools.map(t => t.name || t).join(', ');
+      mcpToolsEl.textContent = toolNames;
+    } else {
+      mcpToolsEl.textContent = 'なし';
+    }
+  }
 }
 
 
