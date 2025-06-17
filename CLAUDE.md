@@ -11,8 +11,12 @@ Chrome AI Assist - WebページのコンテンツをAIと共有して対話で�
 ### コンポーネント間の通信フロー
 ```
 Webページ → Content Script → Background Service Worker → AI API
-    ↑                ↓                    ↓
-    └─── Sidebar UI ←─────────────────────┘
+    ↑                ↓                    ↓            ↗
+    └─── Sidebar UI ←─────────────────────┘            ↑
+                                                      ↑
+                                         Native Host ←┘
+                                              ↓
+                                         MCP Server
 ```
 
 ### 主要コンポーネントの役割
@@ -31,6 +35,16 @@ Webページ → Content Script → Background Service Worker → AI API
    - チャットUIの管理
    - メッセージ履歴の永続化（1ヶ月保持）
    - Content Scriptとの双方向通信
+   - MCP機能の制御とデバッグ情報表示
+
+4. **Native Host** (`native-host/host.js`)
+   - Chrome拡張機能とMCPサーバー間の橋渡し
+   - Native Messaging APIによる通信
+   - MCPクライアント（StdioClientTransport）の管理
+
+5. **MCP Client** (`src/background/mcpClient.js`)
+   - Native Hostとの通信管理
+   - MCPメッセージの送受信とエラーハンドリング
 
 ## 開発方法
 
@@ -53,3 +67,36 @@ Webページ → Content Script → Background Service Worker → AI API
 - APIキーはローカルストレージに保存
 - プロンプトインジェクション対策実装済み
 - CSPヘッダー設定済み
+
+## MCP (Model Context Protocol) サポート
+
+### MCPアーキテクチャ
+Chrome拡張機能は、Chrome Native Messaging APIを通じてローカルのMCPサーバーと通信できます。
+
+### サポート状況
+- ✅ **DocBase MCP Server** - DocBaseページの詳細情報取得、投稿検索
+- 🔄 **GitHub MCP Server** (計画中)
+- 🔄 **Backlog MCP Server** (計画中)
+
+### MCP機能の動作フロー
+1. DocBaseページを開くとMCP処理が自動的にトリガー
+2. Native HostがDocBase MCPサーバーに接続
+3. 利用可能なツールを取得（getPost, searchPosts等）
+4. ページURLから投稿IDを抽出
+5. MCPツールで詳細情報を取得
+6. サイドバーに取得した情報を表示
+
+### Native Messaging設定
+- マニフェスト: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.chrome_ai_assist.mcp_bridge.json`
+- ホスト実行ファイル: `native-host/host.js`
+- 切り替えスクリプト: `native-host/switch-host.sh` (mock/simple/real版の切り替え)
+
+### セキュリティ設定
+MCPサーバーのAPIトークンは以下の方法で安全に管理：
+```javascript
+// 環境変数から読み込み（推奨）
+DOCBASE_API_TOKEN: process.env.DOCBASE_API_TOKEN
+
+// または設定ファイルから読み込み
+DOCBASE_API_TOKEN: config.docbaseToken
+```
