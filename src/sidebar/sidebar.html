@@ -353,6 +353,24 @@
             </div>
           </div>
 
+          <div class="debug-section">
+            <h4>🔌 MCP接続状態</h4>
+            <div class="debug-info" id="debugMCPInfo">
+              <div class="debug-item">
+                <span class="debug-label">Native Host:</span>
+                <span class="debug-value" id="debugMCPStatus">未接続</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">DocBase サーバー:</span>
+                <span class="debug-value" id="debugDocbaseStatus">未接続</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">利用可能ツール:</span>
+                <span class="debug-value expandable" id="debugMCPTools">-</span>
+              </div>
+            </div>
+          </div>
+
           <div class="debug-actions">
             <button class="debug-action-btn" id="debugExportBtn">
               💾 情報をエクスポート

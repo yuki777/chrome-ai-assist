@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developer.mozilla.org)",
+      "WebFetch(domain:developer.chrome.com)",
+      "WebFetch(domain:modelcontextprotocol.io)",
+      "Bash(npm install:*)",
+      "Bash(chmod:*)",
+      "Bash(grep:*)",
+      "Bash(chrome --version)",
+      "Bash(./install.sh:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(timeout:*)",
+      "Bash(echo:*)",
+      "Bash(./host.js:*)",
+      "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** /Users/adachi/.volta/bin/npx -y @krayinc/docbase-mcp-server@latest)",
+      "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** timeout 3 /Users/adachi/.volta/tools/image/npm/10.9.2/bin/npx -y @krayinc/docbase-mcp-server@latest)",
+      "Bash(cp:*)",
+      "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** timeout 5 /Users/adachi/.volta/tools/image/npm/10.9.2/bin/npx -y @krayinc/docbase-mcp-server@latest)",
+      "Bash(./switch-host.sh:*)",
+      "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** /Users/adachi/.volta/tools/image/npm/10.9.2/bin/npx --version)",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}
