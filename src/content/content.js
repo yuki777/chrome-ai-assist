@@ -1,5 +1,17 @@
 // Content Script for Chrome AI Assist
 
+// Utility function to get formatted timestamp
+function getTimestamp() {
+  return new Date().toLocaleString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).replace(/\//g, '-');
+}
+
 let sidebarIframe = null;
 let isInitialized = false;
 
@@ -8,22 +20,22 @@ let isInitialized = false;
   if (isInitialized) return;
   isInitialized = true;
 
-  console.log('🟡 [Content] Content script initialized');
+  console.log(`${getTimestamp()} 🟡 [Content] Content script initialized`);
 
   // Create AI Assist button
   createAIAssistButton();
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('🟡 [Content] Received message:', request);
+    console.log(`${getTimestamp()} 🟡 [Content] Received message:`, request);
     
     if (request.action === 'extractContent') {
-      console.log('🟡 [Content] Extracting page content');
+      console.log(`${getTimestamp()} 🟡 [Content] Extracting page content`);
       const content = extractPageContent();
-      console.log('🟡 [Content] Extracted content:', content);
+      console.log(`${getTimestamp()} 🟡 [Content] Extracted content:`, content);
       sendResponse(content);
     } else if (request.action === 'toggleSidebar') {
-      console.log('🟡 [Content] Toggling sidebar');
+      console.log(`${getTimestamp()} 🟡 [Content] Toggling sidebar`);
       toggleSidebar();
       sendResponse({ success: true });
     }
@@ -109,21 +121,21 @@ function extractPageContent() {
 
 // Toggle sidebar visibility
 function toggleSidebar() {
-  console.log('🟡 [Content] Toggling sidebar visibility');
+  console.log(`${getTimestamp()} 🟡 [Content] Toggling sidebar visibility`);
   try {
     // 既存iframeがあれば必ずremove
     if (sidebarIframe && document.body.contains(sidebarIframe)) {
-      console.log('🟡 [Content] Sidebar already exists, removing it');
+      console.log(`${getTimestamp()} 🟡 [Content] Sidebar already exists, removing it`);
       sidebarIframe.remove();
       sidebarIframe = null;
       document.body.classList.remove('ai-assist-sidebar-open');
       return;
     }
     // 新規生成
-    console.log('🟡 [Content] Creating new sidebar');
+    console.log(`${getTimestamp()} 🟡 [Content] Creating new sidebar`);
     createSidebar();
   } catch (e) {
-    console.error('🔴 [Content] Error in toggleSidebar:', e);
+    console.error(`${getTimestamp()} 🔴 [Content] Error in toggleSidebar:`, e);
     // context失効時は握りつぶす
   }
 }
@@ -172,11 +184,11 @@ function createSidebar() {
           data: pageContent
         }, '*');
       } catch (e) {
-        console.error('🔴 [Content] Error posting INIT to sidebar:', e);
+        console.error(`${getTimestamp()} 🔴 [Content] Error posting INIT to sidebar:`, e);
       }
     };
   } catch (e) {
-    console.error('🔴 [Content] Error in createSidebar:', e);
+    console.error(`${getTimestamp()} 🔴 [Content] Error in createSidebar:`, e);
     // context失効時は握りつぶす
   }
 }

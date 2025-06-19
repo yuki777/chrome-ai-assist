@@ -282,6 +282,39 @@
           </section>
         </div>
 
+        <!-- MCP Server Configuration -->
+        <section class="config-section">
+          <h2>MCP Server Configuration</h2>
+          
+          <div class="form-group">
+            <label for="mcpJsonInput">MCP設定 (JSON形式)</label>
+            <textarea id="mcpJsonInput" rows="15" placeholder='{
+  "mcpServers": {
+    "docbase": {
+      "command": "npx",
+      "args": ["-y", "@krayinc/docbase-mcp-server"],
+      "env": {
+        "DOCBASE_DOMAIN": "your-team",
+        "DOCBASE_API_TOKEN": "your-api-token"
+      }
+    }
+  }
+}'></textarea>
+            <div class="info-text">
+              既存のMCP設定ファイル（cline_docs/config.json等）の内容をそのままペーストできます。
+              <br>対応サーバー: docbase, github, backlog等
+              <br>※ autoApprove, timeout, type フィールドは自動的に処理されます
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" id="validateJsonBtn" class="secondary-btn">JSON検証</button>
+            <button type="button" id="formatJsonBtn" class="secondary-btn">フォーマット</button>
+          </div>
+          
+          <div id="jsonValidationResult" class="validation-result"></div>
+        </section>
+
         <!-- Custom Instructions -->
         <section class="config-section">
           <h2>Custom Instructions</h2>

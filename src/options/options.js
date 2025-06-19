@@ -39,6 +39,12 @@ const anthropicExtendedThinking = document.getElementById('anthropicExtendedThin
 const anthropicBudgetSlider = document.getElementById('anthropicBudgetSlider');
 const anthropicBudgetValue = document.getElementById('anthropicBudgetValue');
 
+// MCP elements
+const mcpJsonInput = document.getElementById('mcpJsonInput');
+const validateJsonBtn = document.getElementById('validateJsonBtn');
+const formatJsonBtn = document.getElementById('formatJsonBtn');
+const jsonValidationResult = document.getElementById('jsonValidationResult');
+
 const customInstructions = document.getElementById('customInstructions');
 
 // Initialize options page
@@ -61,6 +67,10 @@ function setupEventListeners() {
   // Budget sliders
   budgetSlider.addEventListener('input', updateBudgetValue);
   anthropicBudgetSlider.addEventListener('input', updateAnthropicBudgetValue);
+
+  // MCP JSON buttons
+  validateJsonBtn.addEventListener('click', validateMCPJson);
+  formatJsonBtn.addEventListener('click', formatMCPJson);
 
   // Save button
   saveBtn.addEventListener('click', saveSettings);
@@ -130,7 +140,8 @@ async function loadSettings() {
       'useCustomVpcEndpoint',
       'vpcEndpointUrl',
       'useCustomBaseUrl',
-      'customBaseUrl'
+      'customBaseUrl',
+      'mcpSettings'
     ]);
 
     // Set API Provider
@@ -224,6 +235,16 @@ async function loadSettings() {
       customBaseUrl.value = settings.customBaseUrl;
     }
 
+    // Set MCP Settings
+    if (settings.mcpSettings) {
+      // Convert to JSON format if needed
+      if (typeof settings.mcpSettings === 'string') {
+        mcpJsonInput.value = settings.mcpSettings;
+      } else if (settings.mcpSettings.mcpServers) {
+        mcpJsonInput.value = JSON.stringify(settings.mcpSettings, null, 2);
+      }
+    }
+
   } catch (error) {
     console.error('Error loading settings:', error);
     showStatus('設定の読み込みに失敗しました', 'error');
@@ -266,6 +287,25 @@ async function saveSettings() {
       return;
     }
 
+    // Parse and validate MCP JSON
+    let mcpConfig = null;
+    const mcpJsonValue = mcpJsonInput.value.trim();
+    if (mcpJsonValue) {
+      try {
+        mcpConfig = JSON.parse(mcpJsonValue);
+        // Validate structure
+        if (!mcpConfig.mcpServers || typeof mcpConfig.mcpServers !== 'object') {
+          showStatus('MCP設定にmcpServersフィールドが必要です', 'error');
+          setSaveButtonLoading(false);
+          return;
+        }
+      } catch (error) {
+        showStatus('MCP設定のJSONが無効です', 'error');
+        setSaveButtonLoading(false);
+        return;
+      }
+    }
+
     // Prepare settings object
     const settings = {
       apiProvider: provider,
@@ -279,7 +319,8 @@ async function saveSettings() {
       useCustomVpcEndpoint: useCustomVpcEndpoint.checked,
       vpcEndpointUrl: vpcEndpointUrl.value.trim(),
       useCustomBaseUrl: useCustomBaseUrl.checked,
-      customBaseUrl: customBaseUrl.value.trim()
+      customBaseUrl: customBaseUrl.value.trim(),
+      mcpSettings: mcpConfig
     };
 
     // Save to storage
@@ -384,6 +425,93 @@ document.addEventListener('keydown', (e) => {
     saveSettings();
   }
 });
+
+// Validate MCP JSON
+function validateMCPJson() {
+  const jsonValue = mcpJsonInput.value.trim();
+  
+  if (!jsonValue) {
+    showValidationResult('JSONを入力してください', 'error');
+    return;
+  }
+  
+  try {
+    const config = JSON.parse(jsonValue);
+    
+    // Check structure
+    if (!config.mcpServers || typeof config.mcpServers !== 'object') {
+      showValidationResult('mcpServersフィールドが必要です', 'error');
+      return;
+    }
+    
+    // Check each server
+    const serverNames = Object.keys(config.mcpServers);
+    if (serverNames.length === 0) {
+      showValidationResult('少なくとも1つのサーバー設定が必要です', 'error');
+      return;
+    }
+    
+    for (const serverName of serverNames) {
+      const server = config.mcpServers[serverName];
+      if (!server.command) {
+        showValidationResult(`${serverName}: commandフィールドが必要です`, 'error');
+        return;
+      }
+      if (server.args && !Array.isArray(server.args)) {
+        showValidationResult(`${serverName}: argsは配列である必要があります`, 'error');
+        return;
+      }
+    }
+    
+    showValidationResult('有効なMCP設定です', 'success');
+  } catch (error) {
+    // Improve error message for common JSON syntax errors
+    let errorMessage = error.message;
+    if (errorMessage.includes('Unexpected end of JSON input')) {
+      errorMessage = 'JSONが不完全です。閉じ括弧 } が不足している可能性があります';
+    } else if (errorMessage.includes('Expected')) {
+      errorMessage = `JSON構文エラー: ${errorMessage}`;
+    }
+    showValidationResult(`JSONパースエラー: ${errorMessage}`, 'error');
+  }
+}
+
+// Format MCP JSON
+function formatMCPJson() {
+  const jsonValue = mcpJsonInput.value.trim();
+  
+  if (!jsonValue) {
+    return;
+  }
+  
+  try {
+    const config = JSON.parse(jsonValue);
+    mcpJsonInput.value = JSON.stringify(config, null, 2);
+    showValidationResult('フォーマット完了', 'success');
+  } catch (error) {
+    // Improve error message for common JSON syntax errors
+    let errorMessage = error.message;
+    if (errorMessage.includes('Unexpected end of JSON input')) {
+      errorMessage = 'JSONが不完全です。閉じ括弧 } が不足している可能性があります';
+    } else if (errorMessage.includes('Expected')) {
+      errorMessage = `JSON構文エラー: ${errorMessage}`;
+    }
+    showValidationResult(`フォーマットエラー: ${errorMessage}`, 'error');
+  }
+}
+
+// Show validation result
+function showValidationResult(message, type) {
+  jsonValidationResult.textContent = message;
+  jsonValidationResult.className = `validation-result ${type}`;
+  
+  // Auto-hide success messages
+  if (type === 'success') {
+    setTimeout(() => {
+      jsonValidationResult.className = 'validation-result';
+    }, 3000);
+  }
+}
 
 // Test API connection (placeholder function)
 async function testConnection(provider, apiKeys) {

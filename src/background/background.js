@@ -2,6 +2,59 @@
 
 import { mcpClient } from './mcpClient.js';
 
+// Utility function to get formatted timestamp
+function getTimestamp() {
+  return new Date().toLocaleString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).replace(/\//g, '-');
+}
+
+// Listen for storage changes to update MCP settings
+chrome.storage.onChanged.addListener(async (changes, namespace) => {
+  if (namespace === 'local' && changes.mcpSettings) {
+    const newSettings = changes.mcpSettings.newValue;
+    if (newSettings) {
+      try {
+        await mcpClient.setMCPSettings(newSettings);
+        console.log(`${getTimestamp()} MCP settings updated in Native Host`);
+      } catch (error) {
+        console.error(`${getTimestamp()} Failed to update MCP settings:`, error);
+      }
+    }
+  }
+});
+
+// Initialize MCP settings on startup
+chrome.runtime.onStartup.addListener(async () => {
+  const settings = await chrome.storage.local.get('mcpSettings');
+  if (settings.mcpSettings) {
+    try {
+      await mcpClient.setMCPSettings(settings.mcpSettings);
+      console.log(`${getTimestamp()} MCP settings initialized on startup`);
+    } catch (error) {
+      console.error(`${getTimestamp()} Failed to initialize MCP settings:`, error);
+    }
+  }
+});
+
+// Also initialize on installation
+chrome.runtime.onInstalled.addListener(async () => {
+  const settings = await chrome.storage.local.get('mcpSettings');
+  if (settings.mcpSettings) {
+    try {
+      await mcpClient.setMCPSettings(settings.mcpSettings);
+      console.log(`${getTimestamp()} MCP settings initialized on install`);
+    } catch (error) {
+      console.error(`${getTimestamp()} Failed to initialize MCP settings:`, error);
+    }
+  }
+});
+
 // Message listener for communication between content script and extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getPageContent') {
@@ -35,9 +88,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'mcpCallTool') {
+    console.log(`${getTimestamp()} 🔧 MCP Tool Call: ${request.tool} on ${request.server}`, request.args);
     mcpClient.callTool(request.server, request.tool, request.args)
-      .then(result => sendResponse({ success: true, result }))
-      .catch(error => sendResponse({ error: error.message }));
+      .then(result => {
+        console.log(`${getTimestamp()} ✅ MCP Tool Success: ${request.tool}`, result);
+        sendResponse({ success: true, result });
+      })
+      .catch(error => {
+        console.error(`${getTimestamp()} ❌ MCP Tool Error: ${request.tool}`, error);
+        sendResponse({ error: error.message });
+      });
     return true;
   }
 
@@ -52,7 +112,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  * content scriptが注入されていない場合は、scripting.executeScriptで注入してからtoggleSidebarを送る
  */
 chrome.action.onClicked.addListener(async (tab) => {
-  console.log('🟢 [Background] Browser action icon clicked');
+  console.log(`${getTimestamp()} 🟢 [Background] Browser action icon clicked`);
   try {
     // content scriptが既に注入されているか確認
     const [result] = await chrome.scripting.executeScript({
@@ -65,12 +125,12 @@ chrome.action.onClicked.addListener(async (tab) => {
         target: { tabId: tab.id },
         files: ['src/content/content.js']
       });
-      console.log('🟢 [Background] Content script injected');
+      console.log(`${getTimestamp()} 🟢 [Background] Content script injected`);
     }
     // サイドバーを開く
     chrome.tabs.sendMessage(tab.id, { action: 'toggleSidebar' });
   } catch (e) {
-    console.error('🔴 [Background] Failed to inject content script or send message:', e);
+    console.error(`${getTimestamp()} 🔴 [Background] Failed to inject content script or send message:`, e);
   }
 });
 
@@ -89,7 +149,7 @@ async function handleMCPContentProcessing(content, options, sendResponse) {
       sendResponse({ success: true, content: content });
     }
   } catch (error) {
-    console.error('MCP processing error:', error);
+    console.error(`${getTimestamp()} MCP processing error:`, error);
     // Fallback to original content on error
     sendResponse({ success: true, content: content });
   }
@@ -123,7 +183,7 @@ async function handleAIRequest(data, sendResponse) {
 
     sendResponse({ success: true, data: response });
   } catch (error) {
-    console.error('AI API Error:', error);
+    console.error(`${getTimestamp()} AI API Error:`, error);
     sendResponse({ error: error.message });
   }
 }
@@ -142,14 +202,14 @@ async function callBedrockAPI(data, config) {
   
   // Check if selected model is valid, if not use default
   if (!validBedrockModels.includes(model)) {
-    console.warn('Invalid Bedrock model detected, using default:', model);
+    console.warn(`${getTimestamp()} Invalid Bedrock model detected, using default:`, model);
     model = 'us.anthropic.claude-sonnet-4-20250514-v1:0';
     
     // Update the stored setting to the correct model
     try {
       await chrome.storage.local.set({ selectedModel: model });
     } catch (e) {
-      console.error('Failed to update model in storage:', e);
+      console.error(`${getTimestamp()} Failed to update model in storage:`, e);
     }
   }
 
@@ -404,7 +464,7 @@ async function callAnthropicAPI(data, config) {
 
 // Extension installation handler
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Chrome AI Assist installed');
+  console.log(`${getTimestamp()} Chrome AI Assist installed`);
   
   // Force update any invalid model settings
   chrome.storage.local.get(['selectedModel', 'apiProvider']).then(settings => {
@@ -415,7 +475,7 @@ chrome.runtime.onInstalled.addListener(() => {
       ];
       
       if (!validBedrockModels.includes(settings.selectedModel)) {
-        console.log('Updating invalid Bedrock model on installation:', settings.selectedModel);
+        console.log(`${getTimestamp()} Updating invalid Bedrock model on installation:`, settings.selectedModel);
         chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0' });
       }
     }
@@ -428,9 +488,9 @@ async function resetBedrockModel() {
     await chrome.storage.local.set({
       selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0'
     });
-    console.log('Bedrock model reset to default');
+    console.log(`${getTimestamp()} Bedrock model reset to default`);
   } catch (error) {
-    console.error('Failed to reset model:', error);
+    console.error(`${getTimestamp()} Failed to reset model:`, error);
   }
 }
 
@@ -438,10 +498,10 @@ async function resetBedrockModel() {
 async function checkCurrentSettings() {
   try {
     const settings = await chrome.storage.local.get(['apiProvider', 'selectedModel', 'apiKeys']);
-    console.log('Current settings:', settings);
+    console.log(`${getTimestamp()} Current settings:`, settings);
     return settings;
   } catch (error) {
-    console.error('Failed to get settings:', error);
+    console.error(`${getTimestamp()} Failed to get settings:`, error);
   }
 }
 
@@ -449,19 +509,19 @@ async function checkCurrentSettings() {
 async function forceResetBedrockSettings() {
   try {
     const settings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
-    console.log('Current settings before reset:', settings);
+    console.log(`${getTimestamp()} Current settings before reset:`, settings);
     
     if (settings.apiProvider === 'bedrock') {
       await chrome.storage.local.set({
         selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0'
       });
-      console.log('Bedrock settings force reset to valid model');
+      console.log(`${getTimestamp()} Bedrock settings force reset to valid model`);
     }
     
     const newSettings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
-    console.log('Settings after reset:', newSettings);
+    console.log(`${getTimestamp()} Settings after reset:`, newSettings);
   } catch (error) {
-    console.error('Failed to force reset settings:', error);
+    console.error(`${getTimestamp()} Failed to force reset settings:`, error);
   }
 }
 
@@ -479,9 +539,9 @@ chrome.storage.local.get(['apiProvider', 'selectedModel']).then(settings => {
     ];
     
     if (!validBedrockModels.includes(settings.selectedModel)) {
-      console.log('🚨 Invalid Bedrock model detected immediately:', settings.selectedModel);
+      console.log(`${getTimestamp()} 🚨 Invalid Bedrock model detected immediately:`, settings.selectedModel);
       chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0' });
-      console.log('✅ Model reset to default immediately');
+      console.log(`${getTimestamp()} ✅ Model reset to default immediately`);
     }
   }
 });

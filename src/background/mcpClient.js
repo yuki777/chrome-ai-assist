@@ -3,6 +3,18 @@
 
 const NATIVE_HOST_NAME = 'com.chrome_ai_assist.mcp_bridge';
 
+// Utility function to get formatted timestamp
+function getTimestamp() {
+  return new Date().toLocaleString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }).replace(/\//g, '-');
+}
+
 class MCPClient {
   constructor() {
     this.port = null;
@@ -18,24 +30,24 @@ class MCPClient {
     }
 
     try {
-      console.log('🔌 Attempting to connect to native host:', NATIVE_HOST_NAME);
-      console.log('🔌 Chrome version:', navigator.userAgent);
-      console.log('🔌 Extension ID:', chrome.runtime.id);
+      console.log(`${getTimestamp()} 🔌 Attempting to connect to native host:`, NATIVE_HOST_NAME);
+      console.log(`${getTimestamp()} 🔌 Chrome version:`, navigator.userAgent);
+      console.log(`${getTimestamp()} 🔌 Extension ID:`, chrome.runtime.id);
       
       this.port = chrome.runtime.connectNative(NATIVE_HOST_NAME);
-      console.log('🔌 Native port created successfully');
-      console.log('🔌 Port object:', this.port);
+      console.log(`${getTimestamp()} 🔌 Native port created successfully`);
+      console.log(`${getTimestamp()} 🔌 Port object:`, this.port);
       
       this.port.onMessage.addListener((message) => {
-        console.log('📨 Message received from native host:', message);
+        console.log(`${getTimestamp()} 📨 Message received from native host:`, message);
         this.handleMessage(message);
       });
 
       this.port.onDisconnect.addListener(() => {
         const error = chrome.runtime.lastError;
-        console.error('❌ Native host disconnected:', error?.message || 'Unknown reason');
+        console.error(`${getTimestamp()} ❌ Native host disconnected:`, error?.message || 'Unknown reason');
         if (error) {
-          console.error('🔍 Chrome runtime error details:', {
+          console.error(`${getTimestamp()} 🔍 Chrome runtime error details:`, {
             message: error.message,
             error: error,
             toString: error.toString(),
@@ -45,7 +57,7 @@ class MCPClient {
           
           // Try to log all properties
           for (const key in error) {
-            console.error(`🔍 Error property [${key}]:`, error[key]);
+            console.error(`${getTimestamp()} 🔍 Error property [${key}]:`, error[key]);
           }
         }
         this.connected = false;
@@ -63,13 +75,13 @@ class MCPClient {
       const pingResponse = await this.sendMessage({ type: 'ping' });
       if (pingResponse.data?.pong) {
         this.connected = true;
-        console.log('Successfully connected to MCP bridge');
+        console.log(`${getTimestamp()} Successfully connected to MCP bridge`);
         return true;
       }
       
       throw new Error('Ping failed');
     } catch (error) {
-      console.error('Failed to connect to native host:', error);
+      console.error(`${getTimestamp()} Failed to connect to native host:`, error);
       this.connected = false;
       return false;
     }
@@ -87,7 +99,7 @@ class MCPClient {
       const timeout = setTimeout(() => {
         this.messageHandlers.delete(id);
         reject(new Error('Message timeout'));
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout
 
       this.messageHandlers.set(id, { resolve, reject, timeout });
       this.port.postMessage({ ...message, id });
@@ -96,11 +108,11 @@ class MCPClient {
 
   // Handle incoming messages from native host
   handleMessage(message) {
-    console.log('Received message from native host:', message);
+    console.log(`${getTimestamp()} Received message from native host:`, message);
 
     // Handle debug messages
     if (message.type === 'debug') {
-      console.log('[Native Host Debug]', message.message);
+      console.log(`${getTimestamp()} [Native Host Debug]`, message.message);
       return;
     }
 
@@ -118,6 +130,16 @@ class MCPClient {
         }
       }
     }
+  }
+
+  // Set MCP settings
+  async setMCPSettings(settings) {
+    await this.connect();
+    const response = await this.sendMessage({
+      type: 'setMCPSettings',
+      settings: settings
+    });
+    return response.success;
   }
 
   // Connect to MCP server
@@ -166,7 +188,7 @@ class MCPClient {
       try {
         // Try to use MCP server's search or content processing capabilities
         const tools = await this.listTools(serverName);
-        console.log('Available tools:', tools);
+        console.log(`${getTimestamp()} Available tools:`, tools);
 
         // Example: Use search tool if available
         if (tools.tools?.find(t => t.name === 'search')) {
@@ -176,7 +198,7 @@ class MCPClient {
           return searchResult;
         }
       } catch (error) {
-        console.error('Error processing with MCP:', error);
+        console.error(`${getTimestamp()} Error processing with MCP:`, error);
       }
     }
 
