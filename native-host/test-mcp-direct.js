@@ -19,7 +19,7 @@ async function testDocBaseMCP() {
     env: {
       ...process.env,
       DOCBASE_DOMAIN: 'media-sys',
-      DOCBASE_API_TOKEN: 'docbase_MtV-jFC7ksQ38Fj6yTEkByBMrLcd_BBqg-sJX1eoTN9RC5vZ4sp6ap3p6o1gbzdo'
+      DOCBASE_API_TOKEN: 'docbase_YMFu3GP9x7tZYJozemFWTMeyC9ZriUVd5tdnRaFQsNjv7keZPxsFiNPH7jUkhr8o'
     }
   });
 

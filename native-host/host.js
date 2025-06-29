@@ -166,7 +166,8 @@ class MCPClientManager {
       name: 'chrome-ai-assist-native-host',
       version: '1.0.0'
     }, {
-      capabilities: {}
+      capabilities: {},
+      protocolVersion: '2025-06-18'
     });
 
     logDebug(`Creating StdioClientTransport with proper parameters...`);
@@ -176,7 +177,13 @@ class MCPClientManager {
       command: config.command,
       args: config.args || [],
       env: { ...process.env, ...(config.env || {}) },
-      stderr: 'pipe'  // Pipe stderr so we can monitor it
+      stderr: 'pipe',  // Pipe stderr so we can monitor it
+      // Fix for stdio buffering issues
+      spawnOptions: {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: false,
+        windowsHide: true
+      }
     });
 
     logDebug(`StdioClientTransport created successfully`);
@@ -211,6 +218,15 @@ class MCPClientManager {
 
     logDebug(`Connecting client to transport...`);
     await client.connect(transport);
+    
+    // Test the connection immediately
+    logDebug(`Testing connection with listTools...`);
+    try {
+      const testTools = await client.listTools();
+      logDebug(`Connection test successful, got ${testTools.tools?.length || 0} tools`);
+    } catch (testError) {
+      logDebug(`Connection test failed: ${testError.message}`);
+    }
     
     this.clients.set(serverName, { client, transport });
     logDebug(`Successfully connected to ${serverName} server`);
@@ -249,11 +265,62 @@ class MCPClientManager {
     logDebug(`Connection established, calling tool...`);
     
     try {
-      const result = await connection.client.callTool(toolName, args);
-      logDebug(`Tool call successful, result: ${JSON.stringify(result, null, 2)}`);
-      return result;
+      logDebug(`About to call connection.client.callTool...`);
+      logDebug(`Client state: connected=${connection.client.isConnected?.()}, transport=${!!connection.transport}`);
+      const startTime = Date.now();
+      
+      
+      logDebug(`Calling client.callTool('${toolName}', ${JSON.stringify(args)})`);
+      
+      // Monitor the transport
+      if (connection.transport && connection.transport.process) {
+        logDebug(`Transport process PID: ${connection.transport.process.pid}`);
+        logDebug(`Transport process connected: ${connection.transport.process.connected}`);
+      }
+      
+      // Try with a shorter timeout first (10 seconds)
+      const shortTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Tool call timeout after 10 seconds')), 10000);
+      });
+      
+      // Log before calling
+      logDebug(`About to invoke callTool method...`);
+      
+      // Try to manually send the request if needed
+      let callPromise;
+      try {
+        // First try the normal way
+        callPromise = connection.client.callTool(toolName, args);
+        logDebug(`callTool promise created successfully`);
+      } catch (immediateError) {
+        logDebug(`Immediate error in callTool: ${immediateError.message}`);
+        throw immediateError;
+      }
+      
+      logDebug(`Racing callTool promise with timeout...`);
+      
+      // Add a progress checker
+      let progressTimeout = setTimeout(() => {
+        logDebug(`Warning: No response after 5 seconds, transport may be stuck`);
+      }, 5000);
+      
+      try {
+        const result = await Promise.race([
+          callPromise,
+          shortTimeoutPromise
+        ]);
+        
+        clearTimeout(progressTimeout);
+        const endTime = Date.now();
+        logDebug(`Tool call successful in ${endTime - startTime}ms, result: ${JSON.stringify(result, null, 2)}`);
+        return result;
+      } catch (error) {
+        clearTimeout(progressTimeout);
+        throw error;
+      }
     } catch (error) {
       logDebug(`Tool call failed: ${error.message}`);
+      logDebug(`Tool call error stack: ${error.stack}`);
       throw error;
     }
   }

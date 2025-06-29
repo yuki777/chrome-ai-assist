@@ -21,7 +21,14 @@
       "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** timeout 5 /Users/adachi/.volta/tools/image/npm/10.9.2/bin/npx -y @krayinc/docbase-mcp-server@latest)",
       "Bash(./switch-host.sh:*)",
       "Bash(DOCBASE_DOMAIN=media-sys DOCBASE_API_TOKEN=docbase_**************************************************************** /Users/adachi/.volta/tools/image/npm/10.9.2/bin/npx --version)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(./test-docbase-native.js)",
+      "Bash(./test-mcp-direct.js)",
+      "Bash(./test-simple-mcp.js)",
+      "Bash(./test-mcp-debug.js)",
+      "Bash(./test-mcp-raw.js)",
+      "Bash(./test-other-tools.js)"
     ],
     "deny": []
   }
