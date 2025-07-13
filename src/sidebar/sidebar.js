@@ -229,6 +229,33 @@ function sendMessage() {
   const message = messageInput.value.trim();
   if (!message || !isApiConfigured || isApiRequestInProgress) return;
 
+  // Check for /now command
+  if (message === '/now') {
+    // Set API request in progress
+    isApiRequestInProgress = true;
+    updateSendButtonState();
+
+    // Add user message to chat
+    addUserMessage(message);
+    
+    // Clear input
+    messageInput.value = '';
+    autoResizeTextarea();
+
+    // Show loading indicator
+    const loadingMessage = addAIMessage('', true);
+
+    // Send MCP request for current time
+    parent.postMessage({
+      type: 'MCP_REQUEST',
+      data: {
+        command: 'now'
+      }
+    }, '*');
+    
+    return;
+  }
+
   // Set API request in progress
   isApiRequestInProgress = true;
   updateSendButtonState();

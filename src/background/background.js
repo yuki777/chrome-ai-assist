@@ -16,6 +16,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleAIRequest(request.data, sendResponse);
     return true; // Will respond asynchronously
   }
+
+  if (request.action === 'callMCP') {
+    handleMCPRequest(request.data, sendResponse);
+    return true; // Will respond asynchronously
+  }
 });
 
 /**
@@ -438,3 +443,141 @@ chrome.storage.local.get(['apiProvider', 'selectedModel']).then(settings => {
     }
   }
 });
+
+// MCP通信機能
+let mcpPort = null;
+let mcpRequestId = 1;
+let mcpPendingRequests = new Map();
+
+// MCP接続管理
+async function connectMCPBridge() {
+  if (mcpPort) {
+    return mcpPort;
+  }
+
+  try {
+    console.log('🔌 [MCP] Connecting to Native Messaging Host...');
+    mcpPort = chrome.runtime.connectNative('com.chromeaiassist.mcpbridge');
+    
+    mcpPort.onMessage.addListener((message) => {
+      console.log('📨 [MCP] Received from bridge:', message);
+      
+      if (message.type === 'mcp_response') {
+        // minimal-bridge用の簡易処理
+        if (message.result && !message.result.id) {
+          // 最初の待機中リクエストを解決
+          const firstRequest = mcpPendingRequests.values().next().value;
+          if (firstRequest) {
+            const requestId = Array.from(mcpPendingRequests.keys())[0];
+            mcpPendingRequests.delete(requestId);
+            firstRequest.resolve(message.result);
+          }
+        } else if (message.result && message.result.id && mcpPendingRequests.has(message.result.id)) {
+          const { resolve } = mcpPendingRequests.get(message.result.id);
+          mcpPendingRequests.delete(message.result.id);
+          resolve(message.result);
+        }
+      } else if (message.type === 'error') {
+        console.error('🔴 [MCP] Bridge error:', message.message);
+        // すべての待機中リクエストを拒否
+        for (const [id, { reject }] of mcpPendingRequests) {
+          reject(new Error(message.message));
+        }
+        mcpPendingRequests.clear();
+      }
+    });
+
+    mcpPort.onDisconnect.addListener(() => {
+      console.log('🔌 [MCP] Native Messaging Host disconnected');
+      mcpPort = null;
+      
+      // すべての待機中リクエストを拒否
+      for (const [id, { reject }] of mcpPendingRequests) {
+        reject(new Error('Native messaging disconnected'));
+      }
+      mcpPendingRequests.clear();
+    });
+
+    return mcpPort;
+  } catch (error) {
+    console.error('🔴 [MCP] Failed to connect to Native Messaging Host:', error);
+    throw error;
+  }
+}
+
+// MCPリクエスト処理
+async function handleMCPRequest(data, sendResponse) {
+  try {
+    const port = await connectMCPBridge();
+    
+    const requestId = mcpRequestId++;
+    const mcpMessage = {
+      jsonrpc: "2.0",
+      method: data.method,
+      params: data.params || {},
+      id: requestId
+    };
+
+    const request = {
+      action: 'mcp_request',
+      server: data.server || 'now',
+      message: mcpMessage
+    };
+
+    console.log('📤 [MCP] Sending request:', request);
+
+    // レスポンスを待機するPromiseを作成
+    const responsePromise = new Promise((resolve, reject) => {
+      mcpPendingRequests.set(requestId, { resolve, reject });
+      
+      // タイムアウト設定（30秒）
+      setTimeout(() => {
+        if (mcpPendingRequests.has(requestId)) {
+          mcpPendingRequests.delete(requestId);
+          reject(new Error('MCP request timeout'));
+        }
+      }, 30000);
+    });
+
+    // リクエスト送信
+    port.postMessage(request);
+
+    // レスポンス待機
+    const result = await responsePromise;
+    sendResponse({ success: true, data: result });
+
+  } catch (error) {
+    console.error('🔴 [MCP] Request failed:', error);
+    sendResponse({ error: error.message });
+  }
+}
+
+// MCP通信のテスト関数（デバッグ用）
+async function testMCPConnection() {
+  try {
+    console.log('🧪 [MCP] Testing connection...');
+    
+    const response = await new Promise((resolve, reject) => {
+      handleMCPRequest({
+        method: 'tools/list',
+        server: 'now'
+      }, (response) => {
+        if (response.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response.data);
+        }
+      });
+    });
+
+    console.log('✅ [MCP] Test successful:', response);
+    return response;
+  } catch (error) {
+    console.error('❌ [MCP] Test failed:', error);
+    throw error;
+  }
+}
+
+// デバッグ用にグローバルに公開
+globalThis.testMCPConnection = testMCPConnection;
+globalThis.connectMCPBridge = connectMCPBridge;
