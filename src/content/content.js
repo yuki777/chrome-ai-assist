@@ -180,6 +180,34 @@ window.addEventListener('message', (event) => {
         data: response
       }, '*');
     });
+  } else if (event.data.type === 'MCP_REQUEST') {
+    // Handle MCP request (e.g., /now command)
+    chrome.runtime.sendMessage({
+      action: 'callMCP',
+      data: {
+        method: 'tools/call',
+        params: {
+          name: 'get-current-time',
+          arguments: { format: 'JST' }
+        }
+      }
+    }, (response) => {
+      // MCPレスポンスを整形
+      let formattedResponse;
+      if (response.success && response.data && response.data.content) {
+        formattedResponse = {
+          success: true,
+          data: response.data.content[0].text
+        };
+      } else {
+        formattedResponse = response;
+      }
+      
+      sidebarIframe.contentWindow.postMessage({
+        type: 'AI_RESPONSE',
+        data: formattedResponse
+      }, '*');
+    });
   }
 });
 
