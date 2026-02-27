@@ -1,7 +1,96 @@
 // Background Service Worker for Chrome AI Assist
 
+// === Native Messaging (MCP Bridge) ===
+const MCP_HOST_NAME = 'com.yuki777.chrome_ai_assist.mcp';
+const MCP_TIMEOUT_MS = 30_000;
+let nativePort = null;
+const mcpPending = new Map();
+
+// Allowlist: server -> Set of allowed tools (first layer of defense)
+const MCP_ALLOW = {
+  backlog: new Set(['get_issue', 'get_issue_comments']),
+  docbase: new Set(['search_posts', 'get_post'])
+};
+
+function ensureNativePort() {
+  if (nativePort) return nativePort;
+
+  nativePort = chrome.runtime.connectNative(MCP_HOST_NAME);
+
+  nativePort.onMessage.addListener((msg) => {
+    const req = mcpPending.get(msg.id);
+    if (!req) return; // Orphan response — discard
+    clearTimeout(req.timer);
+    mcpPending.delete(msg.id);
+    if (msg.ok) {
+      req.resolve(msg.result);
+    } else {
+      req.reject(new Error(msg.error?.message || 'native host error'));
+    }
+  });
+
+  nativePort.onDisconnect.addListener(() => {
+    const err = new Error(
+      chrome.runtime.lastError?.message || 'native host disconnected'
+    );
+    for (const [, req] of mcpPending) {
+      clearTimeout(req.timer);
+      req.reject(err);
+    }
+    mcpPending.clear();
+    nativePort = null;
+  });
+
+  return nativePort;
+}
+
+function callNativeHost(message) {
+  return new Promise((resolve, reject) => {
+    const id = crypto.randomUUID();
+    const timer = setTimeout(() => {
+      mcpPending.delete(id);
+      reject(new Error('native host timeout'));
+    }, MCP_TIMEOUT_MS);
+
+    mcpPending.set(id, { resolve, reject, timer });
+
+    try {
+      const port = ensureNativePort();
+      port.postMessage({ id, ...message });
+    } catch (e) {
+      clearTimeout(timer);
+      mcpPending.delete(id);
+      reject(e);
+    }
+  });
+}
+
 // Message listener for communication between content script and extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // === MCP handlers ===
+  if (request.action === 'callMcpTool') {
+    const { server, tool, arguments: args } = request.payload || {};
+
+    // Allowlist validation (background-side, first layer)
+    if (!MCP_ALLOW[server]?.has(tool)) {
+      sendResponse({ error: `Tool not allowed: ${server}.${tool}` });
+      return true;
+    }
+
+    callNativeHost({ type: 'call_tool', server, tool, arguments: args })
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(err => sendResponse({ error: err.message }));
+    return true; // async response
+  }
+
+  if (request.action === 'mcpPing') {
+    callNativeHost({ type: 'ping' })
+      .then(result => sendResponse({ success: true, data: result }))
+      .catch(err => sendResponse({ error: err.message }));
+    return true; // async response
+  }
+
+  // === Existing handlers ===
   if (request.action === 'getPageContent') {
     // Forward the request to content script
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -53,7 +142,7 @@ async function handleAIRequest(data, sendResponse) {
   try {
     // Get API configuration from storage
     const config = await chrome.storage.local.get(['apiProvider', 'apiKeys', 'selectedModel']);
-    
+
     if (!config.apiProvider || !config.apiKeys) {
       sendResponse({ error: 'API not configured. Please configure API settings first.' });
       return;
@@ -84,20 +173,20 @@ async function handleAIRequest(data, sendResponse) {
 // AWS Bedrock API call
 async function callBedrockAPI(data, config) {
   const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = config.apiKeys;
-  
+
   // Validate and correct model name
   const validBedrockModels = [
-    'us.anthropic.claude-opus-4-20250514-v1:0',
-    'us.anthropic.claude-sonnet-4-20250514-v1:0'
+    'us.anthropic.claude-opus-4-6-v1:0',
+    'us.anthropic.claude-sonnet-4-6-v1:0'
   ];
-  
-  let model = config.selectedModel || 'us.anthropic.claude-sonnet-4-20250514-v1:0';
-  
+
+  let model = config.selectedModel || 'us.anthropic.claude-sonnet-4-6-v1:0';
+
   // Check if selected model is valid, if not use default
   if (!validBedrockModels.includes(model)) {
     console.warn('Invalid Bedrock model detected, using default:', model);
-    model = 'us.anthropic.claude-sonnet-4-20250514-v1:0';
-    
+    model = 'us.anthropic.claude-sonnet-4-6-v1:0';
+
     // Update the stored setting to the correct model
     try {
       await chrome.storage.local.set({ selectedModel: model });
@@ -158,7 +247,7 @@ async function callBedrockAPI(data, config) {
 
 // AWS RFC 3986 URI encoding (required for AWS Signature V4)
 function awsUriEncode(str) {
-  return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
+  return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
     return '%' + c.charCodeAt(0).toString(16).toUpperCase();
   });
 }
@@ -166,37 +255,37 @@ function awsUriEncode(str) {
 // AWS Signature V4 implementation
 async function generateAWSSignatureV4(params) {
   const { method, url, body, accessKey, secretKey, sessionToken, region, service } = params;
-  
+
   const urlObj = new URL(url);
   const host = urlObj.hostname;
-  
+
   // Create canonical URI with proper AWS RFC 3986 encoding
   // Each path segment should be URI encoded according to RFC 3986, but slashes should remain as slashes
   const pathSegments = urlObj.pathname.split('/');
-  const canonicalUri = pathSegments.map(segment => 
+  const canonicalUri = pathSegments.map(segment =>
     segment === '' ? '' : awsUriEncode(segment)
   ).join('/');
-  
+
   // Create timestamp
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
   const dateStamp = amzDate.substr(0, 8);
-  
+
   // Create canonical headers (must be sorted)
   const canonicalHeaders = [
     `host:${host}`,
     `x-amz-date:${amzDate}`
   ];
-  
+
   if (sessionToken) {
     canonicalHeaders.push(`x-amz-security-token:${sessionToken}`);
   }
-  
+
   canonicalHeaders.sort();
   const signedHeaders = canonicalHeaders.map(h => h.split(':')[0]).join(';');
-  
+
   const payloadHash = await sha256(body);
-  
+
   const canonicalRequest = [
     method,
     canonicalUri,
@@ -205,7 +294,7 @@ async function generateAWSSignatureV4(params) {
     signedHeaders,
     payloadHash
   ].join('\n');
-  
+
   // Create string to sign
   const algorithm = 'AWS4-HMAC-SHA256';
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
@@ -215,24 +304,24 @@ async function generateAWSSignatureV4(params) {
     credentialScope,
     await sha256(canonicalRequest)
   ].join('\n');
-  
+
   // Calculate signature
   const signingKey = await getSignatureKey(secretKey, dateStamp, region, service);
   const signature = await hmacSha256(signingKey, stringToSign);
-  
+
   // Create authorization header
   const authorizationHeader = `${algorithm} Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-  
+
   // Return headers
   const headers = {
     'Authorization': authorizationHeader,
     'X-Amz-Date': amzDate
   };
-  
+
   if (sessionToken) {
     headers['X-Amz-Security-Token'] = sessionToken;
   }
-  
+
   return headers;
 }
 
@@ -316,7 +405,7 @@ async function callOpenAIAPI(data, config) {
 // Anthropic API call (placeholder)
 async function callAnthropicAPI(data, config) {
   const { anthropicApiKey } = config.apiKeys;
-  const model = config.selectedModel || 'us.anthropic.claude-sonnet-4-20250514-v1:0';
+  const model = config.selectedModel || 'claude-sonnet-4-6';
 
   // Anthropic APIではsystemプロンプトは別パラメータ
   const requestBody = {
@@ -358,18 +447,18 @@ async function callAnthropicAPI(data, config) {
 // Extension installation handler
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Chrome AI Assist installed');
-  
+
   // Force update any invalid model settings
   chrome.storage.local.get(['selectedModel', 'apiProvider']).then(settings => {
     if (settings.apiProvider === 'bedrock' && settings.selectedModel) {
       const validBedrockModels = [
-        'us.anthropic.claude-opus-4-20250514-v1:0',
-        'us.anthropic.claude-sonnet-4-20250514-v1:0'
+        'us.anthropic.claude-opus-4-6-v1:0',
+        'us.anthropic.claude-sonnet-4-6-v1:0'
       ];
-      
+
       if (!validBedrockModels.includes(settings.selectedModel)) {
         console.log('Updating invalid Bedrock model on installation:', settings.selectedModel);
-        chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0' });
+        chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0' });
       }
     }
   });
@@ -379,7 +468,7 @@ chrome.runtime.onInstalled.addListener(() => {
 async function resetBedrockModel() {
   try {
     await chrome.storage.local.set({
-      selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0'
+      selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0'
     });
     console.log('Bedrock model reset to default');
   } catch (error) {
@@ -403,14 +492,14 @@ async function forceResetBedrockSettings() {
   try {
     const settings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
     console.log('Current settings before reset:', settings);
-    
+
     if (settings.apiProvider === 'bedrock') {
       await chrome.storage.local.set({
-        selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0'
+        selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0'
       });
       console.log('Bedrock settings force reset to valid model');
     }
-    
+
     const newSettings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
     console.log('Settings after reset:', newSettings);
   } catch (error) {
@@ -427,13 +516,13 @@ globalThis.forceResetBedrockSettings = forceResetBedrockSettings;
 chrome.storage.local.get(['apiProvider', 'selectedModel']).then(settings => {
   if (settings.apiProvider === 'bedrock' && settings.selectedModel) {
     const validBedrockModels = [
-      'us.anthropic.claude-opus-4-20250514-v1:0',
-      'us.anthropic.claude-sonnet-4-20250514-v1:0'
+      'us.anthropic.claude-opus-4-6-v1:0',
+      'us.anthropic.claude-sonnet-4-6-v1:0'
     ];
-    
+
     if (!validBedrockModels.includes(settings.selectedModel)) {
       console.log('🚨 Invalid Bedrock model detected immediately:', settings.selectedModel);
-      chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-20250514-v1:0' });
+      chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0' });
       console.log('✅ Model reset to default immediately');
     }
   }

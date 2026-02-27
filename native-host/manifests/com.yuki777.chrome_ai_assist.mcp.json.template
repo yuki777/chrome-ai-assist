@@ -1,0 +1,9 @@
+{
+  "name": "com.yuki777.chrome_ai_assist.mcp",
+  "description": "Chrome AI Assist - MCP Native Host Bridge",
+  "path": "__HOST_PATH__",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://__EXTENSION_ID__/"
+  ]
+}

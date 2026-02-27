@@ -13,19 +13,30 @@ let isInitialized = false;
 
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('🟡 [Content] Received message:', request);
-    
+    // Content script only handles its own actions; ignore others
+    // so that background's async response is not short-circuited.
     if (request.action === 'extractContent') {
       console.log('🟡 [Content] Extracting page content');
       const content = extractPageContent();
       console.log('🟡 [Content] Extracted content:', content);
       sendResponse(content);
-    } else if (request.action === 'toggleSidebar') {
+      return true;
+    }
+    if (request.action === 'toggleSidebar') {
       console.log('🟡 [Content] Toggling sidebar');
       toggleSidebar();
       sendResponse({ success: true });
+      return true;
     }
+    // Unknown action — return false so Chrome doesn't treat this as a response
+    return false;
   });
+
+  // Auto-open sidebar on page load (for testing)
+  console.log('🟡 [Content] Auto-opening sidebar');
+  setTimeout(() => {
+    createSidebar();
+  }, 500);
 })();
 
 

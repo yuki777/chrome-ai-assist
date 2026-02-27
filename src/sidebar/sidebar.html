@@ -353,6 +353,43 @@
             </div>
           </div>
 
+          <div class="debug-section">
+            <h4>🔌 MCP Native Host</h4>
+            <div class="debug-info" id="debugMcpInfo">
+              <div class="debug-item">
+                <span class="debug-label">接続状態:</span>
+                <span class="debug-value" id="debugMcpStatus">未テスト</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">最後の結果:</span>
+                <div
+                  class="debug-value expandable code-block"
+                  id="debugMcpResult"
+                >
+                  -
+                </div>
+              </div>
+            </div>
+            <div
+              style="
+                margin-top: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+              "
+            >
+              <button class="debug-action-btn" id="mcpPingBtn">
+                Ping テスト
+              </button>
+              <button class="debug-action-btn" id="mcpBacklogBtn">
+                Backlog: get_issue テスト
+              </button>
+              <button class="debug-action-btn" id="mcpDocbaseBtn">
+                DocBase: search_posts テスト
+              </button>
+            </div>
+          </div>
+
           <div class="debug-actions">
             <button class="debug-action-btn" id="debugExportBtn">
               💾 情報をエクスポート

@@ -68,6 +68,11 @@ function setupEventListeners() {
   // Debug action buttons
   debugExportBtn.addEventListener('click', exportDebugInfo);
 
+  // MCP test buttons
+  document.getElementById('mcpPingBtn')?.addEventListener('click', mcpTestPing);
+  document.getElementById('mcpBacklogBtn')?.addEventListener('click', mcpTestBacklog);
+  document.getElementById('mcpDocbaseBtn')?.addEventListener('click', mcpTestDocbase);
+
   // History button
   historyBtn.addEventListener('click', toggleHistoryPanel);
 
@@ -923,18 +928,120 @@ async function deleteHistoryItem(historyId) {
 // Clear all history
 async function clearAllHistory() {
   if (!confirm('すべての履歴を削除しますか？この操作は取り消せません。')) return;
-  
+
   try {
     await chrome.storage.local.set({ 'chrome-ai-assist-chat-history-list': [] });
     currentHistoryId = null;
-    
+
     // Reload history list
     await loadHistoryList();
-    
+
     showSuccessMessage('すべての履歴を削除しました');
-    
+
   } catch (error) {
     console.error('Error clearing all history:', error);
     showErrorMessage('履歴の削除に失敗しました');
+  }
+}
+
+// =============================================================================
+// MCP TEST FUNCTIONS
+// =============================================================================
+
+function updateMcpStatus(status, isError = false) {
+  const el = document.getElementById('debugMcpStatus');
+  if (el) {
+    el.textContent = status;
+    el.style.color = isError ? '#e74c3c' : '#27ae60';
+  }
+}
+
+function updateMcpResult(result) {
+  const el = document.getElementById('debugMcpResult');
+  if (el) {
+    el.textContent = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+  }
+}
+
+async function mcpTestPing() {
+  updateMcpStatus('送信中...');
+  updateMcpResult('...');
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'mcpPing' });
+    if (!response) {
+      updateMcpStatus('エラー', true);
+      updateMcpResult('応答なし (Service Workerから応答がありませんでした)');
+    } else if (response.error) {
+      updateMcpStatus('エラー', true);
+      updateMcpResult(response.error);
+    } else {
+      updateMcpStatus('接続OK');
+      updateMcpResult(response.data);
+    }
+  } catch (e) {
+    updateMcpStatus('エラー', true);
+    updateMcpResult(e.message);
+  }
+}
+
+async function mcpTestBacklog() {
+  const issueKey = prompt('BacklogのissueIdOrKeyを入力:', 'PROJ-1');
+  if (!issueKey) return;
+
+  updateMcpStatus('Backlog呼び出し中...');
+  updateMcpResult('...');
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'callMcpTool',
+      payload: {
+        server: 'backlog',
+        tool: 'get_issue',
+        arguments: { issueIdOrKey: issueKey }
+      }
+    });
+    if (!response) {
+      updateMcpStatus('Backlog エラー', true);
+      updateMcpResult('応答なし');
+    } else if (response.error) {
+      updateMcpStatus('Backlog エラー', true);
+      updateMcpResult(response.error);
+    } else {
+      updateMcpStatus('Backlog OK');
+      updateMcpResult(response.data);
+    }
+  } catch (e) {
+    updateMcpStatus('Backlog エラー', true);
+    updateMcpResult(e.message);
+  }
+}
+
+async function mcpTestDocbase() {
+  const query = prompt('DocBase検索クエリを入力:', 'test');
+  if (!query) return;
+
+  updateMcpStatus('DocBase呼び出し中...');
+  updateMcpResult('...');
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'callMcpTool',
+      payload: {
+        server: 'docbase',
+        tool: 'search_posts',
+        arguments: { q: query }
+      }
+    });
+    if (!response) {
+      updateMcpStatus('DocBase エラー', true);
+      updateMcpResult('応答なし');
+    } else if (response.error) {
+      updateMcpStatus('DocBase エラー', true);
+      updateMcpResult(response.error);
+    } else {
+      updateMcpStatus('DocBase OK');
+      updateMcpResult(response.data);
+    }
+  } catch (e) {
+    updateMcpStatus('DocBase エラー', true);
+    updateMcpResult(e.message);
   }
 }
