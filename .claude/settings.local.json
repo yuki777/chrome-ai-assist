@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(chmod +x /Users/adachi/git/chrome-ai-assist/native-host/run-host.sh)",
+      "Bash(chmod +x /Users/adachi/git/chrome-ai-assist/native-host/src/host.js)",
+      "Bash(node -e \" const msg = JSON.stringify\\({id:''test-1'', type:''ping''}\\); const buf = Buffer.alloc\\(4 + msg.length\\); buf.writeUInt32LE\\(msg.length, 0\\); buf.write\\(msg, 4\\); process.stdout.write\\(buf\\); \")",
+      "Bash(node src/host.js)",
+      "Bash(node -e \" process.stdin.once\\(''readable'', \\(\\) => { const header = process.stdin.read\\(4\\); if \\(!header\\) { console.log\\(''no response''\\); process.exit\\(1\\); } const len = header.readUInt32LE\\(0\\); const body = process.stdin.read\\(len\\); console.log\\(JSON.parse\\(body.toString\\(\\)\\)\\); }\\); \")",
+      "Bash(node test-ping.js)",
+      "Bash(chmod +x:*)",
+      "Bash(./native-host/scripts/install-host-manifest-macos.sh:*)"
     ]
   },
   "enableAllProjectMcpServers": false
