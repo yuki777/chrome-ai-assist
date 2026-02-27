@@ -142,7 +142,7 @@ async function loadSettings() {
     // Set API Keys
     if (settings.apiKeys) {
       const keys = settings.apiKeys;
-      
+
       // AWS Bedrock
       if (keys.awsAccessKey) awsAccessKey.value = keys.awsAccessKey;
       if (keys.awsSecretKey) awsSecretKey.value = keys.awsSecretKey;
@@ -162,15 +162,15 @@ async function loadSettings() {
       if (provider === 'bedrock') {
         // Check if the stored model is valid/supported
         const validBedrockModels = [
-          'us.anthropic.claude-opus-4-20250514-v1:0',
-          'us.anthropic.claude-sonnet-4-20250514-v1:0'
+          'us.anthropic.claude-opus-4-6-v1:0',
+          'us.anthropic.claude-sonnet-4-6-v1:0'
         ];
-        
+
         if (validBedrockModels.includes(settings.selectedModel)) {
           bedrockModel.value = settings.selectedModel;
         } else {
           // Set to default if invalid/old model
-          bedrockModel.value = 'us.anthropic.claude-opus-4-20250514-v1:0';
+          bedrockModel.value = 'us.anthropic.claude-opus-4-6-v1:0';
           console.warn('Invalid Bedrock model detected, reset to default:', settings.selectedModel);
         }
       } else if (provider === 'openai') {
@@ -248,12 +248,12 @@ async function saveSettings() {
         apiKeys.awsRegion = awsRegion.value;
         selectedModel = bedrockModel.value;
         break;
-        
+
       case 'openai':
         apiKeys.openaiApiKey = openaiApiKey.value.trim();
         selectedModel = openaiModel.value;
         break;
-        
+
       case 'anthropic':
         apiKeys.anthropicApiKey = anthropicApiKey.value.trim();
         selectedModel = anthropicModel.value;
@@ -312,14 +312,14 @@ function validateSettings(provider, apiKeys) {
         return false;
       }
       break;
-      
+
     case 'openai':
       if (!apiKeys.openaiApiKey) {
         showStatus('OpenAI APIキーを入力してください', 'error');
         return false;
       }
       break;
-      
+
     case 'anthropic':
       if (!apiKeys.anthropicApiKey) {
         showStatus('Anthropic APIキーを入力してください', 'error');
@@ -334,7 +334,7 @@ function validateSettings(provider, apiKeys) {
 function showStatus(message, type) {
   saveStatus.textContent = message;
   saveStatus.className = `save-status ${type}`;
-  
+
   if (type === 'success') {
     setTimeout(() => {
       saveStatus.textContent = '';
