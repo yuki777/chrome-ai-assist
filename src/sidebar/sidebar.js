@@ -1389,14 +1389,18 @@ function finalizeDocBaseProgress(completed, total, failed, chars, aborted) {
 // =============================================================================
 
 // Call MCP get_issue via background.js -> Native Host
-function callMcpBacklogIssue(issueKey) {
+function callMcpBacklogIssue(issueKeyOrId) {
+  // Numeric string → issueId (number), otherwise → issueKey (string)
+  const args = /^\d+$/.test(issueKeyOrId)
+    ? { issueId: Number(issueKeyOrId) }
+    : { issueKey: issueKeyOrId };
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
       action: 'callMcpTool',
       payload: {
         server: 'backlog',
         tool: 'get_issue',
-        arguments: { issueIdOrKey: issueKey }
+        arguments: args
       }
     }, (response) => {
       if (!response) {
@@ -1411,14 +1415,17 @@ function callMcpBacklogIssue(issueKey) {
 }
 
 // Call MCP get_issue_comments via background.js -> Native Host
-function callMcpBacklogComments(issueKey) {
+function callMcpBacklogComments(issueKeyOrId) {
+  const args = /^\d+$/.test(issueKeyOrId)
+    ? { issueId: Number(issueKeyOrId) }
+    : { issueKey: issueKeyOrId };
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
       action: 'callMcpTool',
       payload: {
         server: 'backlog',
         tool: 'get_issue_comments',
-        arguments: { issueIdOrKey: issueKey }
+        arguments: args
       }
     }, (response) => {
       if (!response) {
@@ -1430,6 +1437,49 @@ function callMcpBacklogComments(issueKey) {
       }
     });
   });
+}
+
+// Call MCP get_issues (search) via background.js -> Native Host
+function callMcpBacklogGetIssues(params) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({
+      action: 'callMcpTool',
+      payload: {
+        server: 'backlog',
+        tool: 'get_issues',
+        arguments: params
+      }
+    }, (response) => {
+      if (!response) {
+        reject(new Error('応答なし'));
+      } else if (response.error) {
+        reject(new Error(response.error));
+      } else {
+        resolve(response.data);
+      }
+    });
+  });
+}
+
+// Discover child issues of a parent issue via get_issues
+async function discoverChildIssues(parentIssueId) {
+  try {
+    const data = await callMcpBacklogGetIssues({
+      parentIssueId: [parentIssueId],
+      count: 100
+    });
+    if (!data?.content?.length) return [];
+    const text = data.content[0].text;
+    const parsed = JSON.parse(text);
+    const issues = Array.isArray(parsed) ? parsed : [];
+    return issues.map(i => ({
+      key: i.issueKey || String(i.id),
+      id: i.id
+    }));
+  } catch (e) {
+    console.warn(`[Backlog] Failed to discover children of ${parentIssueId}:`, e.message);
+    return [];
+  }
 }
 
 // Parse MCP get_issue response
@@ -1473,6 +1523,21 @@ function formatBacklogIssueForPrompt(issueKey, issue, comments) {
   if (issue.created) lines.push(`作成日: ${issue.created}`);
   if (issue.updated) lines.push(`更新日: ${issue.updated}`);
   if (issue.dueDate) lines.push(`期限日: ${issue.dueDate}`);
+
+  // Parent/child relationship
+  if (issue.parentIssueId) {
+    const parentIssue = backlogIssues.find(i => {
+      const parsed = i.formatted.match(/\(([A-Za-z0-9_]+-\d+)\)/);
+      const iKey = parsed ? parsed[1] : i.key;
+      // Match by key or by checking if the issue's numeric ID matches parentIssueId
+      return iKey === String(issue.parentIssueId) || i.key === String(issue.parentIssueId);
+    });
+    if (parentIssue) {
+      lines.push(`親課題: ${parentIssue.key} (${parentIssue.summary})`);
+    } else {
+      lines.push(`親課題ID: ${issue.parentIssueId}`);
+    }
+  }
 
   // Milestone
   if (issue.milestone?.length > 0) {
@@ -1565,11 +1630,41 @@ async function fetchBacklogIssues(issueKeys) {
           completed++;
           console.log(`[Backlog] Skipping ${key}: would exceed ${BACKLOG_MAX_CHARS.toLocaleString()} char limit`);
         } else {
-          backlogIssues.push({ key, summary: issue.summary || key, formatted });
+          const displayKey = issue.issueKey || key;
+          backlogIssues.push({ key: displayKey, summary: issue.summary || displayKey, formatted });
           backlogTotalChars += issueChars;
           completed++;
           rebuildSystemPrompt();
           renderReferences();
+
+          // Track both numeric ID and key to prevent duplicate fetches
+          if (issue.id) seen.add(String(issue.id));
+          if (issue.issueKey) seen.add(issue.issueKey);
+
+          // Discover parent issue
+          if (issue.parentIssueId) {
+            const parentId = String(issue.parentIssueId);
+            if (!seen.has(parentId)) {
+              seen.add(parentId);
+              queue.push(parentId);
+              console.log(`[Backlog] Discovered parent issue ${parentId} from ${displayKey}`);
+            }
+          }
+
+          // Discover child issues (parent = issue without parentIssueId)
+          if (!issue.parentIssueId && issue.id) {
+            const children = await discoverChildIssues(issue.id);
+            for (const child of children) {
+              const childKey = child.key;
+              const childId = String(child.id);
+              if (!seen.has(childKey) && !seen.has(childId)) {
+                seen.add(childKey);
+                if (child.id) seen.add(childId);
+                queue.push(childKey);
+                console.log(`[Backlog] Discovered child issue ${childKey} from ${displayKey}`);
+              }
+            }
+          }
 
           // Discover linked issue keys from description and comments
           const descText = issue.description || '';
@@ -1579,7 +1674,7 @@ async function fetchBacklogIssues(issueKeys) {
             if (!seen.has(dk)) {
               seen.add(dk);
               queue.push(dk);
-              console.log(`[Backlog] Discovered linked issue ${dk} from ${key}`);
+              console.log(`[Backlog] Discovered linked issue ${dk} from ${displayKey}`);
             }
           }
         }

@@ -6,7 +6,7 @@ const log = (msg) => process.stderr.write(`[mcp-bridge] ${msg}\n`);
 const SERVERS = {
   backlog: {
     command: 'npx',
-    args: ['-y', 'github:shueisha-arts-and-digital/backlog-mcp-server'],
+    args: ['-y', 'backlog-mcp-server', '--enable-toolsets', 'issue'],
     env: ['BACKLOG_DOMAIN', 'BACKLOG_API_KEY']
   },
   docbase: {

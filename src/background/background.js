@@ -8,7 +8,7 @@ const mcpPending = new Map();
 
 // Allowlist: server -> Set of allowed tools (first layer of defense)
 const MCP_ALLOW = {
-  backlog: new Set(['get_issue', 'get_issue_comments']),
+  backlog: new Set(['get_issue', 'get_issue_comments', 'get_issues']),
   docbase: new Set(['get_post'])
 };
 
