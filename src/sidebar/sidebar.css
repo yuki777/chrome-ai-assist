@@ -958,9 +958,190 @@ body {
   color: #ef4444;
 }
 
+#docbaseProgressMain.truncated {
+  color: #f59e0b;
+}
+
 #docbaseProgressSub {
   font-size: 11px;
   color: #6b7280;
+}
+
+/* Backlog Progress */
+.backlog-progress {
+  padding: 0 0 12px 0;
+  transition: opacity 0.3s ease;
+}
+
+.backlog-progress.fade-out {
+  opacity: 0;
+}
+
+.backlog-progress-bar-bg {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.backlog-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #42ce9f, #2bba8e);
+  transition: width 0.3s ease;
+}
+
+.backlog-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#backlogProgressMain {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+#backlogProgressMain.done {
+  color: #2bba8e;
+}
+
+#backlogProgressMain.error {
+  color: #ef4444;
+}
+
+#backlogProgressMain.truncated {
+  color: #f59e0b;
+}
+
+#backlogProgressSub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* References Container */
+.references-container {
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 0 0 8px 0;
+}
+
+.references-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.references-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.references-container::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reference-item-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 12px;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.reference-item-header:hover {
+  background: #f3f4f6;
+}
+
+.reference-item-chevron {
+  font-size: 8px;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  width: 10px;
+  text-align: center;
+}
+
+.reference-item.expanded .reference-item-chevron {
+  transform: rotate(90deg);
+}
+
+.reference-item-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.reference-item-badge.docbase {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.reference-item-badge.backlog {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.reference-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #374151;
+  flex: 1;
+  min-width: 0;
+}
+
+.reference-item-meta {
+  font-size: 10px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.reference-item-body {
+  display: none;
+  padding: 8px 12px;
+  margin: 0 4px 4px 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #4b5563;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reference-item-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.reference-item-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reference-item-body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.reference-item.expanded .reference-item-body {
+  display: block;
 }
 
 /* Star Button */

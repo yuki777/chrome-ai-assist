@@ -58,6 +58,24 @@ function extractDocBaseLinks() {
   return [...ids];
 }
 
+// Extract Backlog issue keys from current page URL and all links
+function extractBacklogLinks() {
+  const re = /https?:\/\/[^\/]+\.backlog\.(?:jp|com)\/view\/([A-Za-z0-9][A-Za-z0-9_-]*-\d+)/;
+  const keys = new Set();
+
+  // 現在ページのURL
+  const m = window.location.href.match(re);
+  if (m) keys.add(m[1]);
+
+  // ページ内の全リンク
+  document.querySelectorAll('a[href]').forEach(a => {
+    const match = a.href.match(re);
+    if (match) keys.add(match[1]);
+  });
+
+  return [...keys];
+}
+
 // Extract page content
 function extractPageContent() {
   const title = document.title;
@@ -115,7 +133,8 @@ function extractPageContent() {
     url,
     content,
     timestamp: new Date().toISOString(),
-    docbasePostIds: extractDocBaseLinks()
+    docbasePostIds: extractDocBaseLinks(),
+    backlogIssueKeys: extractBacklogLinks()
   };
 }
 

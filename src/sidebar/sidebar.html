@@ -93,6 +93,20 @@
             <span id="docbaseProgressSub"></span>
           </div>
         </div>
+        <!-- Backlog取得進捗 -->
+        <div class="backlog-progress" id="backlogProgress" style="display: none;">
+          <div class="backlog-progress-bar-bg">
+            <div class="backlog-progress-bar-fill" id="backlogProgressBar"></div>
+          </div>
+          <div class="backlog-progress-text">
+            <span id="backlogProgressMain"></span>
+            <span id="backlogProgressSub"></span>
+          </div>
+        </div>
+        <!-- 取得済み参考情報 -->
+        <div class="references-container" id="referencesContainer" style="display: none;">
+          <div class="references-list" id="referencesList"></div>
+        </div>
         <div class="input-wrapper">
           <textarea
             id="messageInput"
@@ -319,6 +333,28 @@
               <div class="debug-item">
                 <span class="debug-label">記事一覧:</span>
                 <div class="debug-value expandable code-block" id="debugDocbaseArticles">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
+            <h4>📋 Backlog課題</h4>
+            <div class="debug-info" id="debugBacklogInfo">
+              <div class="debug-item">
+                <span class="debug-label">検出キー数:</span>
+                <span class="debug-value" id="debugBacklogDetected">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">取得済み:</span>
+                <span class="debug-value" id="debugBacklogFetched">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">合計文字数:</span>
+                <span class="debug-value" id="debugBacklogChars">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">課題一覧:</span>
+                <div class="debug-value expandable code-block" id="debugBacklogIssues">-</div>
               </div>
             </div>
           </div>
