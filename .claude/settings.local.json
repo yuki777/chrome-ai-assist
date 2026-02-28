@@ -10,7 +10,12 @@
       "Bash(node -e \" process.stdin.once\\(''readable'', \\(\\) => { const header = process.stdin.read\\(4\\); if \\(!header\\) { console.log\\(''no response''\\); process.exit\\(1\\); } const len = header.readUInt32LE\\(0\\); const body = process.stdin.read\\(len\\); console.log\\(JSON.parse\\(body.toString\\(\\)\\)\\); }\\); \")",
       "Bash(node test-ping.js)",
       "Bash(chmod +x:*)",
-      "Bash(./native-host/scripts/install-host-manifest-macos.sh:*)"
+      "Bash(./native-host/scripts/install-host-manifest-macos.sh:*)",
+      "Bash(node:*)",
+      "Bash(set:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "WebSearch"
     ]
   },
   "enableAllProjectMcpServers": false
