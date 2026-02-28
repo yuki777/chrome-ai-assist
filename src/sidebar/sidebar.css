@@ -911,3 +911,77 @@ body {
     font-size: 12px;
   }
 }
+
+/* DocBase Progress */
+.docbase-progress {
+  padding: 0 0 12px 0;
+  transition: opacity 0.3s ease;
+}
+
+.docbase-progress.fade-out {
+  opacity: 0;
+}
+
+.docbase-progress-bar-bg {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.docbase-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #3b82f6, #10b981);
+  transition: width 0.3s ease;
+}
+
+.docbase-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#docbaseProgressMain {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+#docbaseProgressMain.done {
+  color: #10b981;
+}
+
+#docbaseProgressMain.error {
+  color: #ef4444;
+}
+
+#docbaseProgressSub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Star Button */
+.history-item-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #9ca3af;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-item-star-btn:hover {
+  color: #f59e0b;
+}
+
+.history-item-star-btn.starred {
+  color: #f59e0b;
+}

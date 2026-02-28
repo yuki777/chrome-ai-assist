@@ -8,7 +8,7 @@ const log = (msg) => process.stderr.write(`[host] ${new Date().toISOString()} ${
 // Tool allowlist (second layer of defense; background.js also validates)
 const ALLOW = {
   backlog: new Set(['get_issue', 'get_issue_comments']),
-  docbase: new Set(['search_posts', 'get_post'])
+  docbase: new Set(['get_post'])
 };
 
 function reply(id, payload) {

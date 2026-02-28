@@ -83,6 +83,16 @@
 
       <!-- Input Area -->
       <div class="input-container">
+        <!-- DocBase取得進捗 -->
+        <div class="docbase-progress" id="docbaseProgress" style="display: none;">
+          <div class="docbase-progress-bar-bg">
+            <div class="docbase-progress-bar-fill" id="docbaseProgressBar"></div>
+          </div>
+          <div class="docbase-progress-text">
+            <span id="docbaseProgressMain"></span>
+            <span id="docbaseProgressSub"></span>
+          </div>
+        </div>
         <div class="input-wrapper">
           <textarea
             id="messageInput"
@@ -292,6 +302,28 @@
           </div>
 
           <div class="debug-section">
+            <h4>📚 DocBase記事</h4>
+            <div class="debug-info" id="debugDocbaseInfo">
+              <div class="debug-item">
+                <span class="debug-label">検出ID数:</span>
+                <span class="debug-value" id="debugDocbaseDetected">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">取得済み:</span>
+                <span class="debug-value" id="debugDocbaseFetched">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">合計文字数:</span>
+                <span class="debug-value" id="debugDocbaseChars">-</span>
+              </div>
+              <div class="debug-item">
+                <span class="debug-label">記事一覧:</span>
+                <div class="debug-value expandable code-block" id="debugDocbaseArticles">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="debug-section">
             <h4>💬 チャット状況</h4>
             <div class="debug-info" id="debugChatInfo">
               <div class="debug-item">
@@ -385,7 +417,7 @@
                 Backlog: get_issue テスト
               </button>
               <button class="debug-action-btn" id="mcpDocbaseBtn">
-                DocBase: search_posts テスト
+                DocBase: get_post テスト
               </button>
             </div>
           </div>

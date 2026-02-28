@@ -40,6 +40,24 @@ let isInitialized = false;
 })();
 
 
+// Extract DocBase post IDs from current page URL and all links
+function extractDocBaseLinks() {
+  const re = /https:\/\/[^\/]+\.docbase\.io\/posts\/(\d+)/;
+  const ids = new Set();
+
+  // 現在ページのURL
+  const m = window.location.href.match(re);
+  if (m) ids.add(m[1]);
+
+  // ページ内の全リンク
+  document.querySelectorAll('a[href]').forEach(a => {
+    const match = a.href.match(re);
+    if (match) ids.add(match[1]);
+  });
+
+  return [...ids];
+}
+
 // Extract page content
 function extractPageContent() {
   const title = document.title;
@@ -96,7 +114,8 @@ function extractPageContent() {
     title,
     url,
     content,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    docbasePostIds: extractDocBaseLinks()
   };
 }
 

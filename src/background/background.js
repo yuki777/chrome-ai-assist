@@ -9,7 +9,7 @@ const mcpPending = new Map();
 // Allowlist: server -> Set of allowed tools (first layer of defense)
 const MCP_ALLOW = {
   backlog: new Set(['get_issue', 'get_issue_comments']),
-  docbase: new Set(['search_posts', 'get_post'])
+  docbase: new Set(['get_post'])
 };
 
 function ensureNativePort() {
