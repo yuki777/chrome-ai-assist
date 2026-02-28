@@ -6,8 +6,9 @@ const log = (msg) => process.stderr.write(`[mcp-bridge] ${msg}\n`);
 const SERVERS = {
   backlog: {
     command: 'npx',
-    args: ['-y', 'backlog-mcp-server', '--enable-toolsets', 'issue'],
-    env: ['BACKLOG_DOMAIN', 'BACKLOG_API_KEY']
+    args: ['-y', 'backlog-mcp-server', '--dynamic-toolsets'],
+    env: ['BACKLOG_DOMAIN', 'BACKLOG_API_KEY'],
+    toolsets: ['issue']
   },
   docbase: {
     command: 'npx',
@@ -51,6 +52,16 @@ async function getClient(server) {
     });
     await client.connect(transport);
     log(`connected to ${server}`);
+
+    // Activate dynamic toolsets if configured
+    if (cfg.args.includes('--dynamic-toolsets') && cfg.toolsets) {
+      for (const ts of cfg.toolsets) {
+        log(`enabling toolset "${ts}" on ${server}...`);
+        await client.callTool({ name: 'enable_toolset', arguments: { toolset: ts } });
+        log(`toolset "${ts}" enabled on ${server}`);
+      }
+    }
+
     clients.set(server, client);
     return client;
   })();
