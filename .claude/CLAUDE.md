@@ -1,7 +1,7 @@
 # Chrome AI Assist - Architecture Guide for Claude
 
 ## プロジェクト概要
-Chrome AI Assistは、Webページ内容をAIに読み込ませてチャット形式で対話できるChrome拡張機能です。AWS Bedrock、OpenAI、Anthropic APIの3つのプロバイダーに対応しています。
+Chrome AI Assistは、Webページ内容をAIに読み込ませてチャット形式で対話できるChrome拡張機能です。OpenAIとAnthropic APIに対応し、Native Messaging経由でBacklog/DocBaseのMCP連携も備えています。
 
 ## アーキテクチャ構成
 
@@ -65,8 +65,8 @@ const contentSelectors = [
 
 ### /src/background/
 - **background.js**: Service Worker本体
-  - API呼び出しの処理（Bedrock、OpenAI、Anthropic）
-  - AWS Signature V4の実装
+  - API呼び出しの処理（OpenAI、Anthropic）
+  - Native Host接続管理（MCP連携）
   - メッセージルーティング
   - 拡張機能アイコンクリックハンドリング
 
@@ -81,8 +81,16 @@ const contentSelectors = [
 - **sidebar.js**: チャットUI制御
   - メッセージ送受信
   - チャット履歴管理
+  - DocBase/Backlog自動取得エンジン
   - デバッグパネル機能
   - IME（日本語入力）対応
+
+### /native-host/
+- **bin/setup.js**: ワンコマンドセットアップ（`npx chrome-ai-assist-native-host`）
+- **src/host.js**: メッセージルーティング + ツールAllowlist
+- **src/mcp-bridge.js**: MCP Client singleton管理、認証情報はChrome拡張から受信
+- **src/native-protocol.js**: Chrome Native Messaging バイナリプロトコル
+- **run-host.sh**: エントリポイント（Chromeが起動する）
 
 ### /src/options/
 - **options.js**: 設定画面
@@ -115,13 +123,8 @@ const contentSelectors = [
 
 ## API統合パターン
 
-### AWS Bedrock
-- AWS Signature V4認証の完全実装
-- クロスリージョン・モデル対応
-- セッショントークンサポート
-
 ### OpenAI
-- システムプロンプトをmessages配列の先頭に追加
+- Responses API を使用
 - Bearer Token認証
 
 ### Anthropic

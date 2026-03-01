@@ -1,20 +1,18 @@
-# Native Messaging + ローカル stdio MCP 中継 実装指示書
+# Native Messaging + ローカル stdio MCP 中継 実装仕様書
+
+> **ステータス: 実装済み**
+> 当初PoCとして設計されたが、現在は本番実装済み。この文書は設計リファレンスとして残す。
 
 ## 1. 目的
 `chrome-ai-assist` から `Native Messaging` を使ってローカルプロセスへ接続し、ローカル起動した MCP Server（Backlog / DocBase, stdio）を中継して呼び出せる状態を作る。
 
-## 2. スコープ
-この指示書で実装する範囲は PoC です。
+## 2. 実装状況
 
-- Chrome拡張 Service Worker から Native Host へ接続できる
-- Native Host から `backlog-mcp-server` と `docbase-mcp-server` を stdio で呼び出せる
-- ツール1件以上の実行結果を拡張へ返せる
-
-この指示書で実装しない範囲です。
-
-- Streamable HTTP 化
-- 本番配布用インストーラーの作り込み
-- UIの大幅改修
+- Chrome拡張 Service Worker から Native Host へ接続 ✅
+- Native Host から `backlog-mcp-server` と `docbase-mcp-server` を stdio で呼び出し ✅
+- ツール実行結果を拡張へ返却 ✅
+- ワンコマンドセットアップ (`npx chrome-ai-assist-native-host`) ✅
+- 認証情報のChrome拡張設定画面からの管理 ✅
 
 ## 3. 前提
 - OS: macOS
@@ -39,10 +37,10 @@
 ## 5. 変更対象ファイル
 ### 5.1 追加
 - `native-host/package.json`
+- `native-host/bin/setup.js` （ワンコマンドセットアップ）
 - `native-host/src/host.js`
 - `native-host/src/mcp-bridge.js`
 - `native-host/src/native-protocol.js`
-- `native-host/scripts/install-host-manifest-macos.sh`
 - `native-host/manifests/com.yuki777.chrome_ai_assist.mcp.json.template`
 
 ### 5.2 既存変更
@@ -165,38 +163,32 @@ Native Host manifest のテンプレートを用意し、インストールス�
 - `name`: `com.yuki777.chrome_ai_assist.mcp`
 - `type`: `stdio`
 - `path`: host実行ファイルの絶対パス
-- `allowed_origins`: `chrome-extension://<EXTENSION_ID>/`
+- `allowed_origins`: `chrome-extension://kemfpceoehhnbhimmablbmmobleealma/`
 
-`<EXTENSION_ID>` は unpacked 拡張のIDを使用する。
+拡張IDは `manifest.json` の `key` フィールドで固定済み。
 
-## 9. macOS セットアップ手順（開発者向け）
-## 9.1 拡張IDの確認
-`chrome://extensions` を開き、対象拡張の ID を控える。
+## 9. macOS セットアップ手順
 
-## 9.2 Native Host の準備
-`native-host/` で `npm install` を実行。  
-必要なら `node` 実行用に `chmod +x` を設定。
+ワンコマンドで完了:
 
-## 9.3 manifest 配置
-`native-host/scripts/install-host-manifest-macos.sh` を実行し、manifest を配置。
-
-スクリプト引数例:
 ```bash
-./native-host/scripts/install-host-manifest-macos.sh \
-  --extension-id <EXTENSION_ID> \
-  --host-path "/Users/you/git/chrome-ai-assist/native-host/src/host.js"
+npx chrome-ai-assist-native-host
 ```
 
-## 9.4 環境変数
-Native Host 起動時に参照できるように以下を設定。
+npm公開前は直接実行:
+```bash
+node native-host/bin/setup.js
+```
 
-- `BACKLOG_DOMAIN`
-- `BACKLOG_API_KEY`
-- `DOCBASE_DOMAIN`
-- `DOCBASE_API_TOKEN`
+このコマンドが行うこと:
+1. `npm install` で依存パッケージをインストール
+2. マニフェストJSONを生成し `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` に配置
+3. `run-host.sh` に実行権限を付与
+4. ping疎通確認
 
-PoCでは `host.js` 内で `process.env` 参照で可。  
-本番化時は macOS `launchd` や安全な秘密情報注入手段を別途検討。
+### 認証情報
+Backlog / DocBase の認証情報はChrome拡張の設定画面で管理。
+Native Host 接続時に `configure` メッセージで送信される（`.env` ファイルは不要）。
 
 ## 10. 動作確認シナリオ
 ## 10.1 接続確認
@@ -236,8 +228,8 @@ PoCでは `host.js` 内で `process.env` 参照で可。
   - `host.js` の例外を捕捉し、致命エラー時のログを出す
 
 ## 13. セキュリティ注意点
-- APIキーは拡張の `chrome.storage.local` に置かず、Native Host 側で扱う方が安全
-- `call_tool` で許可する `server` / `tool` を allowlist で制限
+- 認証情報は `chrome.storage.local` に保存し、Native Host に `configure` メッセージで送信
+- `call_tool` で許可する `server` / `tool` を allowlist で制限（background.js + host.js の二重防御）
 - 返却データの最大サイズを制限し、UIフリーズを防ぐ
 
 ## 14. 実装順序（推奨）

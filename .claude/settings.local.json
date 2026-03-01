@@ -15,7 +15,8 @@
       "Bash(set:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(shasum:*)"
     ]
   },
   "enableAllProjectMcpServers": false

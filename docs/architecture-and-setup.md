@@ -37,7 +37,7 @@
 ┌──────────────────────────────────────▼──────────────┐
 │              Native Host (Node.js プロセス)          │
 │                                                     │
-│  run-host.sh (.env読み込み → node src/host.js)      │
+│  run-host.sh → node src/host.js                     │
 │                                                     │
 │  ┌────────────────┐                                 │
 │  │ host.js        │  ALLOW検証 → mcp-bridge.js     │
@@ -64,7 +64,7 @@
 
 | ファイル | 役割 |
 |---------|------|
-| `manifest.json` | Manifest V3。`nativeMessaging` 権限を含む |
+| `manifest.json` | Manifest V3。`nativeMessaging` 権限を含む。`key` で拡張IDを固定 |
 | `src/content/content.js` | ページコンテンツ抽出、DocBase/BacklogリンクID抽出、sidebar iframe作成、サイドバー幅管理 |
 | `src/sidebar/sidebar.js` | チャットUI、DocBase/Backlog自動取得エンジン、履歴・Star管理 |
 | `src/sidebar/sidebar.html` | チャットUI + 進捗バー + デバッグパネル |
@@ -75,19 +75,19 @@
 
 | ファイル | 役割 |
 |---------|------|
-| `native-host/run-host.sh` | エントリポイント。`.env` 読み込み後 `host.js` を起動 |
+| `native-host/run-host.sh` | エントリポイント。`host.js` を起動 |
+| `native-host/bin/setup.js` | ワンコマンドセットアップ（依存インストール + マニフェスト配置 + ping確認） |
 | `native-host/src/host.js` | メッセージルーティング。`ping` / `call_tool` / `list_tools` を処理 |
-| `native-host/src/mcp-bridge.js` | MCP Clientのsingleton管理。サーバごとに遅延接続 |
+| `native-host/src/mcp-bridge.js` | MCP Clientのsingleton管理。サーバごとに遅延接続。認証情報はChrome拡張から受信 |
 | `native-host/src/native-protocol.js` | Chrome Native Messagingバイナリプロトコル実装 |
-| `native-host/manifests/*.template` | Native Host manifest テンプレート |
-| `native-host/scripts/install-host-manifest-macos.sh` | macOS用セットアップスクリプト |
+| `native-host/manifests/*.template` | Native Host manifest テンプレート（拡張IDはハードコード済み） |
 
 ### 2.3 MCP Server（サブプロセス）
 
 Native Host から `npx` 経由で stdio で起動される。
 
-| サーバ | 起動コマンド | 必要な環境変数 |
-|--------|-------------|---------------|
+| サーバ | 起動コマンド | 必要な認証情報（Chrome拡張設定画面で入力） |
+|--------|-------------|------------------------------------------|
 | Backlog | `npx -y backlog-mcp-server --dynamic-toolsets` | `BACKLOG_DOMAIN`, `BACKLOG_API_KEY` |
 | DocBase | `npx -y github:shueisha-arts-and-digital/docbase-mcp-server` | `DOCBASE_DOMAIN`, `DOCBASE_API_TOKEN` |
 
@@ -233,10 +233,10 @@ sidebar.js からの任意のツール呼び出しは、両レイヤーで検証
 
 ### Native Host Manifest
 
-`allowed_origins` で特定の拡張IDのみ接続を許可:
+`allowed_origins` で固定済みの拡張IDのみ接続を許可:
 ```json
 {
-  "allowed_origins": ["chrome-extension://<EXTENSION_ID>/"]
+  "allowed_origins": ["chrome-extension://kemfpceoehhnbhimmablbmmobleealma/"]
 }
 ```
 
@@ -244,8 +244,10 @@ sidebar.js からの任意のツール呼び出しは、両レイヤーで検証
 
 | キー | 保存場所 | 用途 |
 |------|---------|------|
-| AI API Keys (Bedrock/OpenAI/Anthropic) | `chrome.storage.local` | AI API呼び出し |
-| Backlog / DocBase API Keys | Native Host側 `.env` ファイル | MCP Server認証 |
+| AI API Keys (OpenAI/Anthropic) | `chrome.storage.local` | AI API呼び出し |
+| Backlog / DocBase API Keys | `chrome.storage.local` → Native Hostへ送信 | MCP Server認証 |
+
+認証情報はすべてChrome拡張の設定画面で管理。MCP認証情報はNative Host接続時に `configure` メッセージで送信される。
 
 ---
 
@@ -256,75 +258,44 @@ sidebar.js からの任意のツール呼び出しは、両レイヤーで検証
 - macOS
 - Google Chrome
 - Node.js 20以上
-- `npx` が使える状態
-- Backlog / DocBase の API キーを取得済み
 
-### Step 1: リポジトリのクローン
+### Step 1: Chrome拡張のインストール
 
-```bash
-git clone https://github.com/yuki777/chrome-ai-assist.git
-cd chrome-ai-assist
-```
+1. リポジトリをクローン:
+   ```bash
+   git clone https://github.com/yuki777/chrome-ai-assist.git
+   ```
+2. Chrome で `chrome://extensions/` を開く
+3. 右上の「デベロッパーモード」をONにする
+4. 「パッケージ化されていない拡張機能を読み込む」をクリック
+5. `chrome-ai-assist/` フォルダを選択
 
-### Step 2: Chrome拡張のインストール
+> 拡張機能IDは `manifest.json` の `key` フィールドで固定されているため、控える必要はありません。
 
-1. Chrome で `chrome://extensions/` を開く
-2. 右上の「デベロッパーモード」をONにする
-3. 「パッケージ化されていない拡張機能を読み込む」をクリック
-4. `chrome-ai-assist/` フォルダを選択
-5. 拡張機能が追加されたら、表示される**拡張ID**を控える
-
-### Step 3: Native Host のセットアップ
-
-```bash
-# 依存パッケージのインストール
-cd native-host
-npm install
-```
-
-### Step 4: 環境変数の設定
-
-`native-host/.env` ファイルを作成:
-
-```bash
-cat > .env << 'EOF'
-BACKLOG_DOMAIN=your-domain.backlog.jp
-BACKLOG_API_KEY=your-backlog-api-key
-DOCBASE_DOMAIN=your-team
-DOCBASE_API_TOKEN=your-docbase-api-token
-EOF
-```
-
-> **注意**: `.env` ファイルは `.gitignore` に含めること。
-> Chrome はシェルの環境変数を Native Host に引き継がないため、
-> `run-host.sh` が `.env` を `source` して読み込む。
-
-### Step 5: Native Host Manifest のインストール
-
-```bash
-# native-host/ ディレクトリ内で実行
-./scripts/install-host-manifest-macos.sh \
-  --extension-id <Step 2で控えた拡張ID>
-```
-
-成功すると以下が出力される:
-```
-Installed: ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.yuki777.chrome_ai_assist.mcp.json
-Host path: /path/to/native-host/run-host.sh
-Extension ID: xxxxxxxxxxxx
-```
-
-### Step 6: AI API の設定
+### Step 2: AI API の設定
 
 1. Chrome の拡張機能アイコンを右クリック →「オプション」
-2. API Provider を選択（Bedrock / OpenAI / Anthropic）
-3. 認証情報を入力して保存
+2. API Provider を選択（OpenAI / Anthropic）
+3. API Keyを入力して保存
 
-### Step 7: Chrome拡張の再読み込み
+**ここまでで AIチャット機能が利用可能です。**
 
-`chrome://extensions/` で Chrome AI Assist の「更新」ボタンをクリック。
+### Step 3: MCP連携のセットアップ（オプション）
 
-### Step 8: 動作確認
+Backlog / DocBase のコンテンツ自動取得を使う場合のみ必要です。
+
+```bash
+npx chrome-ai-assist-native-host
+```
+
+> npm公開前は `node native-host/bin/setup.js` で直接実行できます。
+
+セットアップが完了したら:
+1. Chrome の拡張機能アイコンを右クリック →「オプション」
+2. Backlog / DocBase の認証情報を入力して保存
+3. `chrome://extensions/` で拡張機能を再読み込み
+
+### Step 4: 動作確認
 
 1. 任意のWebページでサイドバーを開く
 2. デバッグパネル（虫アイコン）を開く
@@ -348,24 +319,24 @@ Extension ID: xxxxxxxxxxxx
 ```
 
 **確認ポイント:**
-1. Manifest が正しい場所にあるか:
+1. セットアップを実行したか: `npx chrome-ai-assist-native-host`
+2. Manifest が正しい場所にあるか:
    ```bash
    cat ~/Library/Application\ Support/Google/Chrome/NativeMessagingHosts/com.yuki777.chrome_ai_assist.mcp.json
    ```
-2. `path` が `run-host.sh` の絶対パスになっているか
-3. `allowed_origins` の拡張IDが一致しているか
+3. `path` が `run-host.sh` の絶対パスになっているか
 4. `run-host.sh` に実行権限があるか: `chmod +x run-host.sh`
 5. 拡張を再読み込みしたか
 
 ### MCP Server に接続できない
 
 ```
-エラー: "missing env: BACKLOG_DOMAIN"
+エラー: "missing env: BACKLOG_DOMAIN (set in Chrome extension options)"
 ```
 
 **確認ポイント:**
-1. `native-host/.env` に必要な環境変数が設定されているか
-2. `.env` のフォーマットが正しいか（`KEY=VALUE` 形式、引用符不要）
+1. Chrome拡張の設定画面でBacklog / DocBase の認証情報が入力されているか
+2. 認証情報を変更した場合、拡張を再読み込みしたか
 
 ### 手動テスト
 
@@ -401,15 +372,15 @@ chrome-ai-assist/
 │       ├── options.js
 │       └── options.css
 └── native-host/
-    ├── package.json              # @modelcontextprotocol/sdk
-    ├── run-host.sh               # エントリポイント（.env読み込み）
+    ├── package.json              # @modelcontextprotocol/sdk, bin + postinstall
+    ├── run-host.sh               # エントリポイント
     ├── test-ping.js              # 手動テスト用
+    ├── bin/
+    │   └── setup.js              # ワンコマンドセットアップ
     ├── manifests/
-    │   └── *.json.template       # Native Host manifest テンプレート
-    ├── scripts/
-    │   └── install-host-manifest-macos.sh
+    │   └── *.json.template       # Native Host manifest テンプレート（拡張IDハードコード済み）
     └── src/
         ├── host.js               # メッセージルーティング + Allowlist
-        ├── mcp-bridge.js         # MCP Client singleton管理
+        ├── mcp-bridge.js         # MCP Client singleton管理 + 認証情報受信
         └── native-protocol.js    # 4byte長プレフィックス プロトコル
 ```

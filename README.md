@@ -7,12 +7,12 @@
 - 🔍 **ページ内容の自動抽出**: 現在のWebページの内容を自動的に読み込み
 - 💬 **AI チャット**: ページ内容について質問や指示が可能
 - 🎨 **サイドバーUI**: 画面右側にチャットインターフェースを表示
-- ⚙️ **複数API対応**: AWS Bedrock、OpenAI、Anthropic APIに対応
+- ⚙️ **複数API対応**: OpenAI、Anthropic APIに対応
+- 🔗 **MCP連携**: Backlog / DocBase のコンテンツを自動取得してAIコンテキストに追加
 - 🌐 **日本語対応**: UIとAI応答の完全日本語対応
 
 ## 対応APIプロバイダー
 
-- AWS Bedrock
 - OpenAI
 - Anthropic
 
@@ -46,12 +46,6 @@ cd chrome-ai-assist
 3. 使用したいAPI Providerを選択
 4. 必要な認証情報を入力：
 
-#### AWS Bedrock の場合
-- AWS Access Key
-- AWS Secret Key
-- AWS Region
-- （オプション）Session Token
-
 #### OpenAI の場合
 - OpenAI API Key
 
@@ -72,6 +66,17 @@ cd chrome-ai-assist
 3. テキストボックスに質問や指示を入力
 4. AIがページ内容を理解した上で応答
 
+### 4. MCP連携（オプション）
+
+Backlog / DocBase のページを開いた際に、関連コンテンツを自動取得してAIのコンテキストに含めます。
+
+```bash
+# Native Host のセットアップ（初回のみ）
+npx chrome-ai-assist-native-host
+```
+
+設定画面でBacklog / DocBase の認証情報を入力すれば利用可能です。
+
 ## プロジェクト構造
 
 ```
@@ -79,22 +84,29 @@ chrome-ai-assist/
 ├── manifest.json                # Manifest V3設定
 ├── src/
 │   ├── background/
-│   │   └── background.js        # Service Worker
+│   │   └── background.js        # Service Worker + Native Host Client
 │   ├── content/
 │   │   ├── content.js          # Content Script
 │   │   └── content.css         # Content Scriptスタイル
 │   ├── sidebar/
 │   │   ├── sidebar.html        # チャットUI
-│   │   ├── sidebar.js          # チャット機能
+│   │   ├── sidebar.js          # チャット機能 + DocBase/Backlog取得
 │   │   └── sidebar.css         # チャットスタイル
 │   └── options/
 │       ├── options.html        # 設定画面
 │       ├── options.js          # 設定ロジック
 │       └── options.css         # 設定スタイル
+├── native-host/                 # MCP Native Host Bridge
+│   ├── bin/
+│   │   └── setup.js            # セットアップコマンド
+│   ├── src/
+│   │   ├── host.js             # メッセージルーティング
+│   │   ├── mcp-bridge.js       # MCP Client管理
+│   │   └── native-protocol.js  # Native Messagingプロトコル
+│   ├── manifests/              # マニフェストテンプレート
+│   ├── package.json
+│   └── run-host.sh             # エントリポイント
 ├── icons/                      # アイコンファイル
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
 └── README.md
 ```
 
@@ -142,8 +154,6 @@ MIT License
 - [ ] カスタムプロンプトテンプレート
 - [ ] ページの要約機能
 - [ ] 多言語対応の拡張
-- [ ] AWS Bedrock認証の完全実装
-- [ ] OpenAI Function Calling対応
 
 ## トラブルシューティング
 
@@ -158,8 +168,8 @@ A: ブラウザの拡張機能権限でストレージアクセスが許可さ�
 **Q: AI応答が返ってこない**
 A: APIキーが正しく設定されているか、ネットワーク接続を確認してください。
 
-**Q: AWS Bedrockでエラーが発生**
-A: 現在AWS Bedrock APIの認証実装が未完了です。OpenAIまたはAnthropicをお使いください。
+**Q: MCP連携が動作しない**
+A: `npx chrome-ai-assist-native-host` でNative Hostをセットアップし、設定画面でBacklog/DocBaseの認証情報を入力してください。
 
 ## サポート
 
