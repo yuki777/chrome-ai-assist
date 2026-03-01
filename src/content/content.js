@@ -3,6 +3,40 @@
 let sidebarIframe = null;
 let isInitialized = false;
 
+// サイドバー幅を計算してCSS変数に設定
+function updateSidebarWidth() {
+  const w = Math.min(480, Math.max(320, Math.round(window.innerWidth * 0.25)));
+  document.documentElement.style.setProperty('--ai-assist-sidebar-width', `${w}px`);
+}
+
+// リサイズ時にサイドバー幅を追従
+window.addEventListener('resize', () => {
+  if (sidebarIframe && document.body.contains(sidebarIframe)) {
+    updateSidebarWidth();
+  }
+});
+
+// position: fixed な全幅要素を検出してマークする
+function markFixedElements() {
+  if (!document.body) return;
+  const threshold = window.innerWidth * 0.8;
+  document.body.querySelectorAll('*').forEach(el => {
+    if (el.id === 'ai-assist-sidebar' || el.closest('#ai-assist-sidebar')) return;
+    const style = getComputedStyle(el);
+    if (style.position !== 'fixed' || style.display === 'none' || style.visibility === 'hidden') return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width >= threshold) {
+      el.setAttribute('data-ai-assist-fixed', '');
+    }
+  });
+}
+
+function unmarkFixedElements() {
+  document.querySelectorAll('[data-ai-assist-fixed]').forEach(el => {
+    el.removeAttribute('data-ai-assist-fixed');
+  });
+}
+
 // Initialize the content script
 (function initialize() {
   if (isInitialized) return;
@@ -148,6 +182,8 @@ function toggleSidebar() {
       sidebarIframe.remove();
       sidebarIframe = null;
       document.body.classList.remove('ai-assist-sidebar-open');
+      document.documentElement.classList.remove('ai-assist-sidebar-open');
+      unmarkFixedElements();
       return;
     }
     // 新規生成
@@ -167,7 +203,12 @@ function createSidebar() {
       sidebarIframe.remove();
       sidebarIframe = null;
       document.body.classList.remove('ai-assist-sidebar-open');
+      document.documentElement.classList.remove('ai-assist-sidebar-open');
+      unmarkFixedElements();
     }
+
+    updateSidebarWidth();
+
     sidebarIframe = document.createElement('iframe');
     sidebarIframe.id = 'ai-assist-sidebar';
     sidebarIframe.src = chrome.runtime.getURL('src/sidebar/sidebar.html');
@@ -175,7 +216,6 @@ function createSidebar() {
       position: fixed !important;
       top: 0 !important;
       right: 0 !important;
-      width: 25% !important;
       height: 100vh !important;
       z-index: 2147483647 !important;
       border: none !important;
@@ -187,6 +227,8 @@ function createSidebar() {
 
     document.body.appendChild(sidebarIframe);
     document.body.classList.add('ai-assist-sidebar-open');
+    document.documentElement.classList.add('ai-assist-sidebar-open');
+    markFixedElements();
 
     // Animate sidebar in
     setTimeout(() => {

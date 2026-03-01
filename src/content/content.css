@@ -1,19 +1,40 @@
 /* Styles for AI Assist Content Script */
 
-/* Body adjustments when sidebar is open */
+/* サイドバー幅のCSS変数（JSから設定） */
+:root {
+  --ai-assist-sidebar-width: 360px;
+}
+
 body.ai-assist-sidebar-open {
-  margin-right: 0 !important;
+  margin-right: var(--ai-assist-sidebar-width) !important;
+  transition: margin-right 0.3s ease !important;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  #ai-assist-sidebar {
-    width: 40% !important;
-  }
+html.ai-assist-sidebar-open {
+  overflow-x: clip !important;
 }
 
+/* サイドバー本体の幅もCSS変数で統一 */
+#ai-assist-sidebar {
+  width: var(--ai-assist-sidebar-width) !important;
+}
+
+/* position: fixed な全幅要素の幅調整 */
+html.ai-assist-sidebar-open [data-ai-assist-fixed] {
+  right: var(--ai-assist-sidebar-width) !important;
+  max-width: calc(100vw - var(--ai-assist-sidebar-width)) !important;
+}
+
+/* モバイルは全幅オーバーレイ */
 @media (max-width: 768px) {
+  body.ai-assist-sidebar-open {
+    margin-right: 0 !important;
+  }
   #ai-assist-sidebar {
     width: 100% !important;
+  }
+  html.ai-assist-sidebar-open [data-ai-assist-fixed] {
+    right: 0 !important;
+    max-width: 100vw !important;
   }
 }
