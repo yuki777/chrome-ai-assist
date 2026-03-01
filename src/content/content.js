@@ -2,6 +2,7 @@
 
 let sidebarIframe = null;
 let isInitialized = false;
+let referenceCache = null;
 
 // サイドバー幅を計算してCSS変数に設定
 function updateSidebarWidth() {
@@ -237,7 +238,7 @@ function createSidebar() {
         const pageContent = extractPageContent();
         sidebarIframe.contentWindow.postMessage({
           type: 'INIT',
-          data: pageContent
+          data: { ...pageContent, cachedReferences: referenceCache }
         }, '*');
       } catch (e) {
         console.error('🔴 [Content] Error posting INIT to sidebar:', e);
@@ -255,6 +256,8 @@ window.addEventListener('message', (event) => {
 
   if (event.data.type === 'CLOSE_SIDEBAR') {
     toggleSidebar();
+  } else if (event.data.type === 'CACHE_UPDATE') {
+    referenceCache = { url: location.href, ...event.data.data };
   } else if (event.data.type === 'SEND_MESSAGE') {
     // Forward message to background script for AI processing
     chrome.runtime.sendMessage({
@@ -275,6 +278,7 @@ new MutationObserver(() => {
   const url = location.href;
   if (url !== lastUrl) {
     lastUrl = url;
+    referenceCache = null;
     // Close sidebar on navigation
     if (sidebarIframe) {
       toggleSidebar();
