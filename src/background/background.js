@@ -173,9 +173,6 @@ async function handleAIRequest(data, sendResponse) {
 
     let response;
     switch (config.apiProvider) {
-      case 'bedrock':
-        response = await callBedrockAPI(data, config);
-        break;
       case 'openai':
         response = await callOpenAIAPI(data, config);
         break;
@@ -193,220 +190,41 @@ async function handleAIRequest(data, sendResponse) {
   }
 }
 
-// AWS Bedrock API call
-async function callBedrockAPI(data, config) {
-  const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = config.apiKeys;
-  const model = config.selectedModel;
-
-  if (!model) {
-    throw new Error('モデルが選択されていません。設定画面でモデルを選択してください。');
-  }
-
-  if (!awsAccessKey || !awsSecretKey || !awsRegion) {
-    throw new Error('AWS credentials are required for Bedrock API');
-  }
-
-  const requestBody = {
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: 32000,
-    messages: data.messages,
-    system: data.systemPrompt || "You are a helpful AI assistant analyzing web content."
-  };
-
-  const url = `https://bedrock-runtime.${awsRegion}.amazonaws.com/model/${model}/invoke`;
-  const body = JSON.stringify(requestBody);
-
-  // Generate AWS Signature V4
-  const signedHeaders = await generateAWSSignatureV4({
-    method: 'POST',
-    url: url,
-    body: body,
-    accessKey: awsAccessKey,
-    secretKey: awsSecretKey,
-    sessionToken: awsSessionToken,
-    region: awsRegion,
-    service: 'bedrock'
-  });
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      ...signedHeaders
-    },
-    body: body
-  });
-
-  if (!response.ok) {
-    let errorText = '';
-    try {
-      errorText = await response.text();
-    } catch (e) {
-      errorText = '(詳細取得失敗)';
-    }
-    throw new Error(`Bedrock API error: ${response.status}\n${errorText}`);
-  }
-
-  const result = await response.json();
-  return result.content[0].text;
-}
-
-// AWS RFC 3986 URI encoding (required for AWS Signature V4)
-function awsUriEncode(str) {
-  return encodeURIComponent(str).replace(/[!'()*]/g, function (c) {
-    return '%' + c.charCodeAt(0).toString(16).toUpperCase();
-  });
-}
-
-// AWS Signature V4 implementation
-async function generateAWSSignatureV4(params) {
-  const { method, url, body, accessKey, secretKey, sessionToken, region, service } = params;
-
-  const urlObj = new URL(url);
-  const host = urlObj.hostname;
-
-  // Create canonical URI with proper AWS RFC 3986 encoding
-  // Each path segment should be URI encoded according to RFC 3986, but slashes should remain as slashes
-  const pathSegments = urlObj.pathname.split('/');
-  const canonicalUri = pathSegments.map(segment =>
-    segment === '' ? '' : awsUriEncode(segment)
-  ).join('/');
-
-  // Create timestamp
-  const now = new Date();
-  const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
-  const dateStamp = amzDate.substr(0, 8);
-
-  // Create canonical headers (must be sorted)
-  const canonicalHeaders = [
-    `host:${host}`,
-    `x-amz-date:${amzDate}`
-  ];
-
-  if (sessionToken) {
-    canonicalHeaders.push(`x-amz-security-token:${sessionToken}`);
-  }
-
-  canonicalHeaders.sort();
-  const signedHeaders = canonicalHeaders.map(h => h.split(':')[0]).join(';');
-
-  const payloadHash = await sha256(body);
-
-  const canonicalRequest = [
-    method,
-    canonicalUri,
-    '', // query string (empty for our case)
-    canonicalHeaders.join('\n') + '\n',
-    signedHeaders,
-    payloadHash
-  ].join('\n');
-
-  // Create string to sign
-  const algorithm = 'AWS4-HMAC-SHA256';
-  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-  const stringToSign = [
-    algorithm,
-    amzDate,
-    credentialScope,
-    await sha256(canonicalRequest)
-  ].join('\n');
-
-  // Calculate signature
-  const signingKey = await getSignatureKey(secretKey, dateStamp, region, service);
-  const signature = await hmacSha256(signingKey, stringToSign);
-
-  // Create authorization header
-  const authorizationHeader = `${algorithm} Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-  // Return headers
-  const headers = {
-    'Authorization': authorizationHeader,
-    'X-Amz-Date': amzDate
-  };
-
-  if (sessionToken) {
-    headers['X-Amz-Security-Token'] = sessionToken;
-  }
-
-  return headers;
-}
-
-// Helper functions for AWS Signature V4
-async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function hmacSha256(key, message) {
-  const keyBuffer = typeof key === 'string' ? new TextEncoder().encode(key) : key;
-  const msgBuffer = new TextEncoder().encode(message);
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw', keyBuffer, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, msgBuffer);
-  const hashArray = Array.from(new Uint8Array(signature));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function getSignatureKey(key, dateStamp, regionName, serviceName) {
-  const kDate = await hmacSha256(`AWS4${key}`, dateStamp);
-  const kRegion = await hmacSha256(hexToUint8Array(kDate), regionName);
-  const kService = await hmacSha256(hexToUint8Array(kRegion), serviceName);
-  const kSigning = await hmacSha256(hexToUint8Array(kService), 'aws4_request');
-  return hexToUint8Array(kSigning);
-}
-
-function hexToUint8Array(hexString) {
-  const bytes = new Uint8Array(hexString.length / 2);
-  for (let i = 0; i < hexString.length; i += 2) {
-    bytes[i / 2] = parseInt(hexString.substr(i, 2), 16);
-  }
-  return bytes;
-}
-
-// OpenAI API call (placeholder)
+// OpenAI Responses API call
 async function callOpenAIAPI(data, config) {
   const { openaiApiKey } = config.apiKeys;
   const model = config.selectedModel || 'gpt-4.1';
 
-  // OpenAI APIではsystemプロンプトをmessagesの最初に追加
-  const messages = [];
+  const input = [];
   if (data.systemPrompt) {
-    messages.push({
-      role: 'system',
-      content: data.systemPrompt
+    input.push({ role: 'developer', content: data.systemPrompt });
+  }
+  for (const m of data.messages) {
+    input.push({
+      role: m.role === 'system' ? 'developer' : m.role,
+      content: m.content
     });
   }
-  messages.push(...data.messages);
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${openaiApiKey}`
     },
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      temperature: 0.7
-    })
+    body: JSON.stringify({ model, input })
   });
 
   if (!response.ok) {
-    let errorText = '';
-    try {
-      errorText = await response.text();
-    } catch (e) {
-      errorText = '(詳細取得失敗)';
-    }
-    throw new Error(`OpenAI API error: ${response.status}\n${errorText}`);
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`OpenAI API error (model: ${model}): ${response.status}\n${errorText}`);
   }
 
   const result = await response.json();
-  return result.choices[0].message.content;
+  const msg = result.output?.find(o => o.type === 'message');
+  const text = msg?.content?.find(c => c.type === 'output_text');
+  if (text) return text.text;
+  throw new Error(`OpenAI API: 応答テキストが見つかりません (model: ${model})`);
 }
 
 // Anthropic API call (placeholder)
@@ -477,9 +295,6 @@ async function handleFetchModels(request, sendResponse) {
   try {
     let models;
     switch (provider) {
-      case 'bedrock':
-        models = await listBedrockModels(apiKeys);
-        break;
       case 'openai':
         models = await listOpenAIModels(apiKeys);
         break;
@@ -494,55 +309,6 @@ async function handleFetchModels(request, sendResponse) {
     console.error('fetchModels error:', error);
     sendResponse({ error: error.message });
   }
-}
-
-async function listBedrockModels(apiKeys) {
-  const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = apiKeys;
-  if (!awsAccessKey || !awsSecretKey || !awsRegion) {
-    throw new Error('AWS認証情報（Access Key, Secret Key, Region）を入力してください');
-  }
-
-  const url = `https://bedrock.${awsRegion}.amazonaws.com/foundation-models`;
-
-  const signedHeaders = await generateAWSSignatureV4({
-    method: 'GET',
-    url,
-    body: '',
-    accessKey: awsAccessKey,
-    secretKey: awsSecretKey,
-    sessionToken: awsSessionToken,
-    region: awsRegion,
-    service: 'bedrock'
-  });
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      ...signedHeaders
-    }
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Bedrock API error: ${response.status} ${errorText}`);
-  }
-
-  const result = await response.json();
-  const summaries = result.modelSummaries || [];
-
-  // Get cross-region setting
-  const settings = await chrome.storage.local.get('useCrossRegion');
-  const useCrossRegion = settings.useCrossRegion || false;
-
-  // Filter Anthropic models and format
-  return summaries
-    .filter(m => m.providerName === 'Anthropic')
-    .map(m => {
-      const id = useCrossRegion ? `us.${m.modelId}` : m.modelId;
-      return { id, name: m.modelName || m.modelId };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function listOpenAIModels(apiKeys) {
@@ -564,8 +330,10 @@ async function listOpenAIModels(apiKeys) {
   }
 
   const result = await response.json();
+  // テキスト生成モデルのみ（embedding/audio/image系を除外）
+  const textGenPattern = /^(gpt-|o[1-9]|chatgpt-)/;
   return (result.data || [])
-    .filter(m => m.id.includes('gpt-'))
+    .filter(m => textGenPattern.test(m.id))
     .map(m => ({ id: m.id, name: m.id }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

@@ -50,7 +50,6 @@
           <h2>API Provider</h2>
           <div class="provider-selector">
             <select id="apiProviderSelect">
-              <option value="bedrock">Amazon Bedrock</option>
               <option value="openai">OpenAI</option>
               <option value="anthropic">Anthropic</option>
             </select>
@@ -59,104 +58,6 @@
 
         <!-- Configuration Forms -->
         <div class="config-forms">
-          <!-- AWS Bedrock Configuration -->
-          <section class="config-section" id="bedrockConfig">
-            <div class="auth-method">
-              <label class="radio-label">
-                <input
-                  type="radio"
-                  name="awsAuth"
-                  value="credentials"
-                  checked
-                />
-                <span>AWS Credentials</span>
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="awsAuth" value="profile" />
-                <span>AWS Profile</span>
-              </label>
-            </div>
-
-            <div id="awsCredentialsGroup">
-              <div class="form-group">
-                <label for="awsAccessKey">AWS Access Key</label>
-                <input type="password" id="awsAccessKey" />
-              </div>
-
-              <div class="form-group">
-                <label for="awsSecretKey">AWS Secret Key</label>
-                <input type="password" id="awsSecretKey" />
-              </div>
-
-              <div class="form-group">
-                <label for="awsSessionToken">AWS Session Token</label>
-                <input
-                  type="password"
-                  id="awsSessionToken"
-                  placeholder="Enter Session Token..."
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="awsRegion">AWS Region</label>
-              <select id="awsRegion">
-                <option value="us-east-1">us-east-1</option>
-                <option value="us-west-2">us-west-2</option>
-                <option value="eu-west-1">eu-west-1</option>
-                <option value="ap-northeast-1">ap-northeast-1</option>
-                <option value="ap-southeast-1">ap-southeast-1</option>
-              </select>
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="useCustomVpcEndpoint" />
-                <span>Use custom VPC endpoint</span>
-              </label>
-            </div>
-
-            <div class="form-group" id="vpcEndpointGroup" style="display: none">
-              <input
-                type="text"
-                id="vpcEndpointUrl"
-                placeholder="Enter VPC Endpoint URL (optional)"
-              />
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="useCrossRegion" />
-                <span>Use cross-region inference</span>
-              </label>
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="usePromptCaching" checked />
-                <span>Use prompt caching</span>
-              </label>
-            </div>
-
-            <div class="info-text">
-              Authenticate by either providing the keys above or use the default
-              AWS credentials providers, i.e. ~/.aws/credentials or environment
-              variables. These credentials are only used locally to make API
-              requests from this extension.
-            </div>
-
-            <div class="form-group">
-              <label for="bedrockModel">Model</label>
-              <div class="model-select-row">
-                <select id="bedrockModel">
-                  <option value="">認証情報を入力後「モデル取得」を押してください</option>
-                </select>
-                <button type="button" class="fetch-models-btn" data-provider="bedrock">モデル取得</button>
-              </div>
-            </div>
-
-          </section>
-
           <!-- OpenAI Configuration -->
           <section
             class="config-section"

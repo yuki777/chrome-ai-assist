@@ -6,22 +6,8 @@ const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
 
 // Configuration forms
-const bedrockConfig = document.getElementById('bedrockConfig');
 const openaiConfig = document.getElementById('openaiConfig');
 const anthropicConfig = document.getElementById('anthropicConfig');
-
-// AWS Bedrock elements
-const awsCredentialsGroup = document.getElementById('awsCredentialsGroup');
-const awsAccessKey = document.getElementById('awsAccessKey');
-const awsSecretKey = document.getElementById('awsSecretKey');
-const awsSessionToken = document.getElementById('awsSessionToken');
-const awsRegion = document.getElementById('awsRegion');
-const useCustomVpcEndpoint = document.getElementById('useCustomVpcEndpoint');
-const vpcEndpointGroup = document.getElementById('vpcEndpointGroup');
-const vpcEndpointUrl = document.getElementById('vpcEndpointUrl');
-const useCrossRegion = document.getElementById('useCrossRegion');
-const usePromptCaching = document.getElementById('usePromptCaching');
-const bedrockModel = document.getElementById('bedrockModel');
 
 // OpenAI elements
 const openaiApiKey = document.getElementById('openaiApiKey');
@@ -50,14 +36,6 @@ function setupEventListeners() {
   // API Provider change
   apiProviderSelect.addEventListener('change', showConfigForm);
 
-  // AWS auth method toggle
-  document.querySelectorAll('input[name="awsAuth"]').forEach(radio => {
-    radio.addEventListener('change', toggleAwsAuthMethod);
-  });
-
-  // VPC Endpoint toggle
-  useCustomVpcEndpoint.addEventListener('change', toggleVpcEndpoint);
-
   // Fetch models buttons
   document.querySelectorAll('.fetch-models-btn').forEach(btn => {
     btn.addEventListener('click', () => fetchModels(btn.dataset.provider));
@@ -78,15 +56,11 @@ function showConfigForm() {
   const provider = apiProviderSelect.value;
 
   // Hide all config forms
-  bedrockConfig.style.display = 'none';
   openaiConfig.style.display = 'none';
   anthropicConfig.style.display = 'none';
 
   // Show selected provider form
   switch (provider) {
-    case 'bedrock':
-      bedrockConfig.style.display = 'block';
-      break;
     case 'openai':
       openaiConfig.style.display = 'block';
       break;
@@ -99,18 +73,12 @@ function showConfigForm() {
 // Fetch models from API and populate dropdown
 async function fetchModels(provider) {
   const btn = document.querySelector(`.fetch-models-btn[data-provider="${provider}"]`);
-  const selectId = provider === 'bedrock' ? 'bedrockModel' : provider === 'openai' ? 'openaiModel' : 'anthropicModel';
+  const selectId = provider === 'openai' ? 'openaiModel' : 'anthropicModel';
   const selectEl = document.getElementById(selectId);
 
   // Collect current API keys from the form
   const apiKeys = {};
   switch (provider) {
-    case 'bedrock':
-      apiKeys.awsAccessKey = awsAccessKey.value.trim();
-      apiKeys.awsSecretKey = awsSecretKey.value.trim();
-      apiKeys.awsSessionToken = awsSessionToken.value.trim();
-      apiKeys.awsRegion = awsRegion.value;
-      break;
     case 'openai':
       apiKeys.openaiApiKey = openaiApiKey.value.trim();
       break;
@@ -168,30 +136,14 @@ async function fetchModels(provider) {
   }
 }
 
-// Toggle AWS credentials group based on auth method
-function toggleAwsAuthMethod() {
-  const method = document.querySelector('input[name="awsAuth"]:checked')?.value;
-  awsCredentialsGroup.style.display = method === 'credentials' ? 'block' : 'none';
-}
-
-// Toggle VPC endpoint input
-function toggleVpcEndpoint() {
-  vpcEndpointGroup.style.display = useCustomVpcEndpoint.checked ? 'block' : 'none';
-}
-
 // Load settings from storage
 async function loadSettings() {
   try {
     const settings = await chrome.storage.local.get([
       'apiProvider',
-      'awsAuthMethod',
       'apiKeys',
       'selectedModel',
       'customInstructions',
-      'usePromptCaching',
-      'useCrossRegion',
-      'useCustomVpcEndpoint',
-      'vpcEndpointUrl',
       'mcpCredentials'
     ]);
 
@@ -201,22 +153,9 @@ async function loadSettings() {
       showConfigForm();
     }
 
-    // Set AWS auth method
-    if (settings.awsAuthMethod) {
-      const radio = document.querySelector(`input[name="awsAuth"][value="${settings.awsAuthMethod}"]`);
-      if (radio) radio.checked = true;
-    }
-    toggleAwsAuthMethod();
-
     // Set API Keys
     if (settings.apiKeys) {
       const keys = settings.apiKeys;
-
-      // AWS Bedrock
-      if (keys.awsAccessKey) awsAccessKey.value = keys.awsAccessKey;
-      if (keys.awsSecretKey) awsSecretKey.value = keys.awsSecretKey;
-      if (keys.awsSessionToken) awsSessionToken.value = keys.awsSessionToken;
-      if (keys.awsRegion) awsRegion.value = keys.awsRegion;
 
       // OpenAI
       if (keys.openaiApiKey) openaiApiKey.value = keys.openaiApiKey;
@@ -228,8 +167,7 @@ async function loadSettings() {
     // Restore saved model as a provisional option (without calling API)
     if (settings.selectedModel) {
       const provider = settings.apiProvider;
-      const selectEl = provider === 'bedrock' ? bedrockModel
-        : provider === 'openai' ? openaiModel
+      const selectEl = provider === 'openai' ? openaiModel
         : provider === 'anthropic' ? anthropicModel
         : null;
 
@@ -246,24 +184,6 @@ async function loadSettings() {
     // Set Custom Instructions
     if (settings.customInstructions) {
       customInstructions.value = settings.customInstructions;
-    }
-
-    // Set other options
-    if (settings.usePromptCaching !== undefined) {
-      usePromptCaching.checked = settings.usePromptCaching;
-    }
-
-    if (settings.useCrossRegion !== undefined) {
-      useCrossRegion.checked = settings.useCrossRegion;
-    }
-
-    if (settings.useCustomVpcEndpoint !== undefined) {
-      useCustomVpcEndpoint.checked = settings.useCustomVpcEndpoint;
-      toggleVpcEndpoint();
-    }
-
-    if (settings.vpcEndpointUrl) {
-      vpcEndpointUrl.value = settings.vpcEndpointUrl;
     }
 
     // MCP Credentials
@@ -292,14 +212,6 @@ async function saveSettings() {
 
     // Collect API keys based on provider
     switch (provider) {
-      case 'bedrock':
-        apiKeys.awsAccessKey = awsAccessKey.value.trim();
-        apiKeys.awsSecretKey = awsSecretKey.value.trim();
-        apiKeys.awsSessionToken = awsSessionToken.value.trim();
-        apiKeys.awsRegion = awsRegion.value;
-        selectedModel = bedrockModel.value;
-        break;
-
       case 'openai':
         apiKeys.openaiApiKey = openaiApiKey.value.trim();
         selectedModel = openaiModel.value;
@@ -328,17 +240,11 @@ async function saveSettings() {
     };
 
     // Prepare settings object
-    const awsAuthMethod = document.querySelector('input[name="awsAuth"]:checked')?.value || 'credentials';
     const settings = {
       apiProvider: provider,
-      awsAuthMethod,
       apiKeys: apiKeys,
       selectedModel: selectedModel,
       customInstructions: customInstructions.value.trim(),
-      usePromptCaching: usePromptCaching.checked,
-      useCrossRegion: useCrossRegion.checked,
-      useCustomVpcEndpoint: useCustomVpcEndpoint.checked,
-      vpcEndpointUrl: vpcEndpointUrl.value.trim(),
       mcpCredentials
     };
 
@@ -366,13 +272,6 @@ async function autoSave() {
 // Validate settings
 function validateSettings(provider, apiKeys) {
   switch (provider) {
-    case 'bedrock':
-      if (!apiKeys.awsRegion) {
-        showStatus('AWSリージョンを選択してください', 'error');
-        return false;
-      }
-      break;
-
     case 'openai':
       if (!apiKeys.openaiApiKey) {
         showStatus('OpenAI APIキーを入力してください', 'error');
