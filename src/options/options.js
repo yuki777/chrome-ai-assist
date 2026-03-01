@@ -11,6 +11,7 @@ const openaiConfig = document.getElementById('openaiConfig');
 const anthropicConfig = document.getElementById('anthropicConfig');
 
 // AWS Bedrock elements
+const awsCredentialsGroup = document.getElementById('awsCredentialsGroup');
 const awsAccessKey = document.getElementById('awsAccessKey');
 const awsSecretKey = document.getElementById('awsSecretKey');
 const awsSessionToken = document.getElementById('awsSessionToken');
@@ -21,9 +22,6 @@ const vpcEndpointUrl = document.getElementById('vpcEndpointUrl');
 const useCrossRegion = document.getElementById('useCrossRegion');
 const usePromptCaching = document.getElementById('usePromptCaching');
 const bedrockModel = document.getElementById('bedrockModel');
-const enableExtendedThinking = document.getElementById('enableExtendedThinking');
-const budgetSlider = document.getElementById('budgetSlider');
-const budgetValue = document.getElementById('budgetValue');
 
 // OpenAI elements
 const openaiApiKey = document.getElementById('openaiApiKey');
@@ -31,15 +29,15 @@ const openaiModel = document.getElementById('openaiModel');
 
 // Anthropic elements
 const anthropicApiKey = document.getElementById('anthropicApiKey');
-const useCustomBaseUrl = document.getElementById('useCustomBaseUrl');
-const customBaseUrlGroup = document.getElementById('customBaseUrlGroup');
-const customBaseUrl = document.getElementById('customBaseUrl');
 const anthropicModel = document.getElementById('anthropicModel');
-const anthropicExtendedThinking = document.getElementById('anthropicExtendedThinking');
-const anthropicBudgetSlider = document.getElementById('anthropicBudgetSlider');
-const anthropicBudgetValue = document.getElementById('anthropicBudgetValue');
 
 const customInstructions = document.getElementById('customInstructions');
+
+// MCP credential elements
+const backlogDomain = document.getElementById('backlogDomain');
+const backlogApiKey = document.getElementById('backlogApiKey');
+const docbaseDomain = document.getElementById('docbaseDomain');
+const docbaseApiToken = document.getElementById('docbaseApiToken');
 
 // Initialize options page
 document.addEventListener('DOMContentLoaded', () => {
@@ -52,15 +50,18 @@ function setupEventListeners() {
   // API Provider change
   apiProviderSelect.addEventListener('change', showConfigForm);
 
+  // AWS auth method toggle
+  document.querySelectorAll('input[name="awsAuth"]').forEach(radio => {
+    radio.addEventListener('change', toggleAwsAuthMethod);
+  });
+
   // VPC Endpoint toggle
   useCustomVpcEndpoint.addEventListener('change', toggleVpcEndpoint);
 
-  // Custom Base URL toggle
-  useCustomBaseUrl.addEventListener('change', toggleCustomBaseUrl);
-
-  // Budget sliders
-  budgetSlider.addEventListener('input', updateBudgetValue);
-  anthropicBudgetSlider.addEventListener('input', updateAnthropicBudgetValue);
+  // Fetch models buttons
+  document.querySelectorAll('.fetch-models-btn').forEach(btn => {
+    btn.addEventListener('click', () => fetchModels(btn.dataset.provider));
+  });
 
   // Save button
   saveBtn.addEventListener('click', saveSettings);
@@ -95,24 +96,87 @@ function showConfigForm() {
   }
 }
 
+// Fetch models from API and populate dropdown
+async function fetchModels(provider) {
+  const btn = document.querySelector(`.fetch-models-btn[data-provider="${provider}"]`);
+  const selectId = provider === 'bedrock' ? 'bedrockModel' : provider === 'openai' ? 'openaiModel' : 'anthropicModel';
+  const selectEl = document.getElementById(selectId);
+
+  // Collect current API keys from the form
+  const apiKeys = {};
+  switch (provider) {
+    case 'bedrock':
+      apiKeys.awsAccessKey = awsAccessKey.value.trim();
+      apiKeys.awsSecretKey = awsSecretKey.value.trim();
+      apiKeys.awsSessionToken = awsSessionToken.value.trim();
+      apiKeys.awsRegion = awsRegion.value;
+      break;
+    case 'openai':
+      apiKeys.openaiApiKey = openaiApiKey.value.trim();
+      break;
+    case 'anthropic':
+      apiKeys.anthropicApiKey = anthropicApiKey.value.trim();
+      break;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.textContent = '取得中...';
+  selectEl.innerHTML = '<option value="">取得中...</option>';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'fetchModels',
+      provider,
+      apiKeys
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    const models = response.models || [];
+    if (models.length === 0) {
+      selectEl.innerHTML = '<option value="">モデルが見つかりませんでした</option>';
+      return;
+    }
+
+    // Populate dropdown
+    selectEl.innerHTML = '';
+    for (const model of models) {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = model.name !== model.id ? `${model.name} (${model.id})` : model.id;
+      selectEl.appendChild(option);
+    }
+
+    // Restore saved selection if it exists in the new list
+    const settings = await chrome.storage.local.get(['selectedModel']);
+    if (settings.selectedModel) {
+      const exists = models.some(m => m.id === settings.selectedModel);
+      if (exists) {
+        selectEl.value = settings.selectedModel;
+      }
+    }
+  } catch (error) {
+    console.error('fetchModels error:', error);
+    selectEl.innerHTML = '<option value="">モデル取得に失敗しました</option>';
+    showStatus(`モデル取得エラー: ${error.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'モデル取得';
+  }
+}
+
+// Toggle AWS credentials group based on auth method
+function toggleAwsAuthMethod() {
+  const method = document.querySelector('input[name="awsAuth"]:checked')?.value;
+  awsCredentialsGroup.style.display = method === 'credentials' ? 'block' : 'none';
+}
+
 // Toggle VPC endpoint input
 function toggleVpcEndpoint() {
   vpcEndpointGroup.style.display = useCustomVpcEndpoint.checked ? 'block' : 'none';
-}
-
-// Toggle custom base URL input
-function toggleCustomBaseUrl() {
-  customBaseUrlGroup.style.display = useCustomBaseUrl.checked ? 'block' : 'none';
-}
-
-// Update budget value display
-function updateBudgetValue() {
-  budgetValue.textContent = budgetSlider.value.toLocaleString();
-}
-
-// Update Anthropic budget value display
-function updateAnthropicBudgetValue() {
-  anthropicBudgetValue.textContent = anthropicBudgetSlider.value.toLocaleString();
 }
 
 // Load settings from storage
@@ -120,17 +184,15 @@ async function loadSettings() {
   try {
     const settings = await chrome.storage.local.get([
       'apiProvider',
+      'awsAuthMethod',
       'apiKeys',
       'selectedModel',
       'customInstructions',
-      'budgetTokens',
-      'enableExtendedThinking',
       'usePromptCaching',
       'useCrossRegion',
       'useCustomVpcEndpoint',
       'vpcEndpointUrl',
-      'useCustomBaseUrl',
-      'customBaseUrl'
+      'mcpCredentials'
     ]);
 
     // Set API Provider
@@ -138,6 +200,13 @@ async function loadSettings() {
       apiProviderSelect.value = settings.apiProvider;
       showConfigForm();
     }
+
+    // Set AWS auth method
+    if (settings.awsAuthMethod) {
+      const radio = document.querySelector(`input[name="awsAuth"][value="${settings.awsAuthMethod}"]`);
+      if (radio) radio.checked = true;
+    }
+    toggleAwsAuthMethod();
 
     // Set API Keys
     if (settings.apiKeys) {
@@ -156,27 +225,21 @@ async function loadSettings() {
       if (keys.anthropicApiKey) anthropicApiKey.value = keys.anthropicApiKey;
     }
 
-    // Set Selected Model - with validation for old/unsupported models
+    // Restore saved model as a provisional option (without calling API)
     if (settings.selectedModel) {
       const provider = settings.apiProvider;
-      if (provider === 'bedrock') {
-        // Check if the stored model is valid/supported
-        const validBedrockModels = [
-          'us.anthropic.claude-opus-4-6-v1:0',
-          'us.anthropic.claude-sonnet-4-6-v1:0'
-        ];
+      const selectEl = provider === 'bedrock' ? bedrockModel
+        : provider === 'openai' ? openaiModel
+        : provider === 'anthropic' ? anthropicModel
+        : null;
 
-        if (validBedrockModels.includes(settings.selectedModel)) {
-          bedrockModel.value = settings.selectedModel;
-        } else {
-          // Set to default if invalid/old model
-          bedrockModel.value = 'us.anthropic.claude-opus-4-6-v1:0';
-          console.warn('Invalid Bedrock model detected, reset to default:', settings.selectedModel);
-        }
-      } else if (provider === 'openai') {
-        openaiModel.value = settings.selectedModel;
-      } else if (provider === 'anthropic') {
-        anthropicModel.value = settings.selectedModel;
+      if (selectEl) {
+        selectEl.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = settings.selectedModel;
+        option.textContent = settings.selectedModel;
+        selectEl.appendChild(option);
+        selectEl.value = settings.selectedModel;
       }
     }
 
@@ -186,18 +249,6 @@ async function loadSettings() {
     }
 
     // Set other options
-    if (settings.budgetTokens) {
-      budgetSlider.value = settings.budgetTokens;
-      updateBudgetValue();
-      anthropicBudgetSlider.value = settings.budgetTokens;
-      updateAnthropicBudgetValue();
-    }
-
-    if (settings.enableExtendedThinking !== undefined) {
-      enableExtendedThinking.checked = settings.enableExtendedThinking;
-      anthropicExtendedThinking.checked = settings.enableExtendedThinking;
-    }
-
     if (settings.usePromptCaching !== undefined) {
       usePromptCaching.checked = settings.usePromptCaching;
     }
@@ -215,13 +266,13 @@ async function loadSettings() {
       vpcEndpointUrl.value = settings.vpcEndpointUrl;
     }
 
-    if (settings.useCustomBaseUrl !== undefined) {
-      useCustomBaseUrl.checked = settings.useCustomBaseUrl;
-      toggleCustomBaseUrl();
-    }
-
-    if (settings.customBaseUrl) {
-      customBaseUrl.value = settings.customBaseUrl;
+    // MCP Credentials
+    if (settings.mcpCredentials) {
+      const mcp = settings.mcpCredentials;
+      if (mcp.backlogDomain) backlogDomain.value = mcp.backlogDomain;
+      if (mcp.backlogApiKey) backlogApiKey.value = mcp.backlogApiKey;
+      if (mcp.docbaseDomain) docbaseDomain.value = mcp.docbaseDomain;
+      if (mcp.docbaseApiToken) docbaseApiToken.value = mcp.docbaseApiToken;
     }
 
   } catch (error) {
@@ -266,20 +317,29 @@ async function saveSettings() {
       return;
     }
 
+    // Build MCP credentials
+    // Strip .docbase.io suffix if user entered it
+    const rawDocbaseDomain = docbaseDomain.value.trim().replace(/\.docbase\.io$/i, '');
+    const mcpCredentials = {
+      backlogDomain: backlogDomain.value.trim(),
+      backlogApiKey: backlogApiKey.value.trim(),
+      docbaseDomain: rawDocbaseDomain,
+      docbaseApiToken: docbaseApiToken.value.trim()
+    };
+
     // Prepare settings object
+    const awsAuthMethod = document.querySelector('input[name="awsAuth"]:checked')?.value || 'credentials';
     const settings = {
       apiProvider: provider,
+      awsAuthMethod,
       apiKeys: apiKeys,
       selectedModel: selectedModel,
       customInstructions: customInstructions.value.trim(),
-      budgetTokens: parseInt(provider === 'anthropic' ? anthropicBudgetSlider.value : budgetSlider.value),
-      enableExtendedThinking: provider === 'anthropic' ? anthropicExtendedThinking.checked : enableExtendedThinking.checked,
       usePromptCaching: usePromptCaching.checked,
       useCrossRegion: useCrossRegion.checked,
       useCustomVpcEndpoint: useCustomVpcEndpoint.checked,
       vpcEndpointUrl: vpcEndpointUrl.value.trim(),
-      useCustomBaseUrl: useCustomBaseUrl.checked,
-      customBaseUrl: customBaseUrl.value.trim()
+      mcpCredentials
     };
 
     // Save to storage

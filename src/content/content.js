@@ -66,11 +66,6 @@ function unmarkFixedElements() {
     return false;
   });
 
-  // Auto-open sidebar on page load (for testing)
-  console.log('🟡 [Content] Auto-opening sidebar');
-  setTimeout(() => {
-    createSidebar();
-  }, 500);
 })();
 
 

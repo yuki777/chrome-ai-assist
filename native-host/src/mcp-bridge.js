@@ -17,6 +17,25 @@ const SERVERS = {
   }
 };
 
+// Credential key → environment variable mapping
+const CRED_TO_ENV = {
+  backlogDomain: 'BACKLOG_DOMAIN',
+  backlogApiKey: 'BACKLOG_API_KEY',
+  docbaseDomain: 'DOCBASE_DOMAIN',
+  docbaseApiToken: 'DOCBASE_API_TOKEN'
+};
+
+// Environment variable → server mapping
+const ENV_TO_SERVER = {
+  BACKLOG_DOMAIN: 'backlog',
+  BACKLOG_API_KEY: 'backlog',
+  DOCBASE_DOMAIN: 'docbase',
+  DOCBASE_API_TOKEN: 'docbase'
+};
+
+/** Runtime env overrides from Chrome extension (takes precedence over process.env / .env) */
+const runtimeEnv = {};
+
 /** @type {Map<string, Client>} */
 const clients = new Map();
 
@@ -35,16 +54,13 @@ async function getClient(server) {
     const cfg = SERVERS[server];
     if (!cfg) throw new Error(`unsupported server: ${server}`);
 
-    // Check required environment variables
-    for (const k of cfg.env) {
-      if (!process.env[k]) throw new Error(`missing env: ${k}`);
-    }
+    const env = buildServerEnv(server);
 
     log(`connecting to ${server}...`);
     const transport = new StdioClientTransport({
       command: cfg.command,
       args: cfg.args,
-      env: process.env
+      env
     });
     const client = new Client({
       name: 'chrome-ai-assist-native-host',
@@ -72,6 +88,60 @@ async function getClient(server) {
   } finally {
     connecting.delete(server);
   }
+}
+
+/**
+ * Build environment for a server subprocess.
+ * Credential keys must be set via runtimeEnv (Chrome extension options).
+ */
+function buildServerEnv(server) {
+  const cfg = SERVERS[server];
+
+  for (const k of cfg.env) {
+    if (!runtimeEnv[k]) throw new Error(`missing env: ${k} (set in Chrome extension options)`);
+  }
+  return { ...process.env, ...runtimeEnv };
+}
+
+/**
+ * Dispose (close) a running MCP client for the given server.
+ */
+async function disposeClient(server) {
+  const client = clients.get(server);
+  if (!client) return;
+  clients.delete(server);
+  try {
+    await client.close();
+    log(`disposed client for ${server}`);
+  } catch (e) {
+    log(`dispose error for ${server}: ${e.message}`);
+  }
+}
+
+/**
+ * Apply credentials from Chrome extension to runtimeEnv.
+ * Disposes affected server clients so they reconnect with new env.
+ * Returns list of server names that were affected.
+ */
+export async function configureCredentials(credentials) {
+  const affected = new Set();
+
+  for (const [credKey, envKey] of Object.entries(CRED_TO_ENV)) {
+    const val = credentials?.[credKey];
+    if (val && val !== runtimeEnv[envKey]) {
+      runtimeEnv[envKey] = val;
+      const srv = ENV_TO_SERVER[envKey];
+      if (srv) affected.add(srv);
+    }
+  }
+
+  // Dispose affected servers so next call reconnects with new env
+  for (const srv of affected) {
+    await disposeClient(srv);
+  }
+
+  log(`configured credentials, affected servers: [${[...affected].join(', ')}]`);
+  return [...affected];
 }
 
 /**

@@ -5,6 +5,8 @@ const MCP_HOST_NAME = 'com.yuki777.chrome_ai_assist.mcp';
 const MCP_TIMEOUT_MS = 30_000;
 let nativePort = null;
 const mcpPending = new Map();
+let mcpConfigured = false;
+let mcpConfigDigest = '';
 
 // Allowlist: server -> Set of allowed tools (first layer of defense)
 const MCP_ALLOW = {
@@ -39,6 +41,7 @@ function ensureNativePort() {
     }
     mcpPending.clear();
     nativePort = null;
+    mcpConfigured = false;
   });
 
   return nativePort;
@@ -65,6 +68,20 @@ function callNativeHost(message) {
   });
 }
 
+async function ensureMcpConfigured() {
+  const { mcpCredentials } = await chrome.storage.local.get('mcpCredentials');
+  const digest = JSON.stringify(mcpCredentials || {});
+  if (mcpConfigured && digest === mcpConfigDigest) return;
+
+  // Only send configure if there are any non-empty values
+  const hasValues = mcpCredentials && Object.values(mcpCredentials).some(v => v);
+  if (hasValues) {
+    await callNativeHost({ type: 'configure', credentials: mcpCredentials });
+  }
+  mcpConfigDigest = digest;
+  mcpConfigured = true;
+}
+
 // Message listener for communication between content script and extension
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // === MCP handlers ===
@@ -77,9 +94,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    callNativeHost({ type: 'call_tool', server, tool, arguments: args })
+    ensureMcpConfigured()
+      .then(() => callNativeHost({ type: 'call_tool', server, tool, arguments: args }))
       .then(result => sendResponse({ success: true, data: result }))
       .catch(err => sendResponse({ error: err.message }));
+    return true; // async response
+  }
+
+  if (request.action === 'fetchModels') {
+    handleFetchModels(request, sendResponse);
     return true; // async response
   }
 
@@ -173,26 +196,10 @@ async function handleAIRequest(data, sendResponse) {
 // AWS Bedrock API call
 async function callBedrockAPI(data, config) {
   const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = config.apiKeys;
+  const model = config.selectedModel;
 
-  // Validate and correct model name
-  const validBedrockModels = [
-    'us.anthropic.claude-opus-4-6-v1:0',
-    'us.anthropic.claude-sonnet-4-6-v1:0'
-  ];
-
-  let model = config.selectedModel || 'us.anthropic.claude-sonnet-4-6-v1:0';
-
-  // Check if selected model is valid, if not use default
-  if (!validBedrockModels.includes(model)) {
-    console.warn('Invalid Bedrock model detected, using default:', model);
-    model = 'us.anthropic.claude-sonnet-4-6-v1:0';
-
-    // Update the stored setting to the correct model
-    try {
-      await chrome.storage.local.set({ selectedModel: model });
-    } catch (e) {
-      console.error('Failed to update model in storage:', e);
-    }
+  if (!model) {
+    throw new Error('モデルが選択されていません。設定画面でモデルを選択してください。');
   }
 
   if (!awsAccessKey || !awsSecretKey || !awsRegion) {
@@ -447,34 +454,7 @@ async function callAnthropicAPI(data, config) {
 // Extension installation handler
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Chrome AI Assist installed');
-
-  // Force update any invalid model settings
-  chrome.storage.local.get(['selectedModel', 'apiProvider']).then(settings => {
-    if (settings.apiProvider === 'bedrock' && settings.selectedModel) {
-      const validBedrockModels = [
-        'us.anthropic.claude-opus-4-6-v1:0',
-        'us.anthropic.claude-sonnet-4-6-v1:0'
-      ];
-
-      if (!validBedrockModels.includes(settings.selectedModel)) {
-        console.log('Updating invalid Bedrock model on installation:', settings.selectedModel);
-        chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0' });
-      }
-    }
-  });
 });
-
-// Add manual setting reset function for debugging
-async function resetBedrockModel() {
-  try {
-    await chrome.storage.local.set({
-      selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0'
-    });
-    console.log('Bedrock model reset to default');
-  } catch (error) {
-    console.error('Failed to reset model:', error);
-  }
-}
 
 // Debug function to check current settings
 async function checkCurrentSettings() {
@@ -487,43 +467,131 @@ async function checkCurrentSettings() {
   }
 }
 
-// Force reset all problematic settings
-async function forceResetBedrockSettings() {
+// Expose functions globally for console access
+globalThis.checkCurrentSettings = checkCurrentSettings;
+
+// === Fetch Models API ===
+
+async function handleFetchModels(request, sendResponse) {
+  const { provider, apiKeys } = request;
   try {
-    const settings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
-    console.log('Current settings before reset:', settings);
-
-    if (settings.apiProvider === 'bedrock') {
-      await chrome.storage.local.set({
-        selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0'
-      });
-      console.log('Bedrock settings force reset to valid model');
+    let models;
+    switch (provider) {
+      case 'bedrock':
+        models = await listBedrockModels(apiKeys);
+        break;
+      case 'openai':
+        models = await listOpenAIModels(apiKeys);
+        break;
+      case 'anthropic':
+        models = await listAnthropicModels(apiKeys);
+        break;
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
     }
-
-    const newSettings = await chrome.storage.local.get(['apiProvider', 'selectedModel']);
-    console.log('Settings after reset:', newSettings);
+    sendResponse({ success: true, models });
   } catch (error) {
-    console.error('Failed to force reset settings:', error);
+    console.error('fetchModels error:', error);
+    sendResponse({ error: error.message });
   }
 }
 
-// Expose functions globally for console access
-globalThis.resetBedrockModel = resetBedrockModel;
-globalThis.checkCurrentSettings = checkCurrentSettings;
-globalThis.forceResetBedrockSettings = forceResetBedrockSettings;
-
-// Immediately force reset if invalid model is detected
-chrome.storage.local.get(['apiProvider', 'selectedModel']).then(settings => {
-  if (settings.apiProvider === 'bedrock' && settings.selectedModel) {
-    const validBedrockModels = [
-      'us.anthropic.claude-opus-4-6-v1:0',
-      'us.anthropic.claude-sonnet-4-6-v1:0'
-    ];
-
-    if (!validBedrockModels.includes(settings.selectedModel)) {
-      console.log('🚨 Invalid Bedrock model detected immediately:', settings.selectedModel);
-      chrome.storage.local.set({ selectedModel: 'us.anthropic.claude-sonnet-4-6-v1:0' });
-      console.log('✅ Model reset to default immediately');
-    }
+async function listBedrockModels(apiKeys) {
+  const { awsAccessKey, awsSecretKey, awsRegion, awsSessionToken } = apiKeys;
+  if (!awsAccessKey || !awsSecretKey || !awsRegion) {
+    throw new Error('AWS認証情報（Access Key, Secret Key, Region）を入力してください');
   }
-});
+
+  const url = `https://bedrock.${awsRegion}.amazonaws.com/foundation-models`;
+
+  const signedHeaders = await generateAWSSignatureV4({
+    method: 'GET',
+    url,
+    body: '',
+    accessKey: awsAccessKey,
+    secretKey: awsSecretKey,
+    sessionToken: awsSessionToken,
+    region: awsRegion,
+    service: 'bedrock'
+  });
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      ...signedHeaders
+    }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Bedrock API error: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json();
+  const summaries = result.modelSummaries || [];
+
+  // Get cross-region setting
+  const settings = await chrome.storage.local.get('useCrossRegion');
+  const useCrossRegion = settings.useCrossRegion || false;
+
+  // Filter Anthropic models and format
+  return summaries
+    .filter(m => m.providerName === 'Anthropic')
+    .map(m => {
+      const id = useCrossRegion ? `us.${m.modelId}` : m.modelId;
+      return { id, name: m.modelName || m.modelId };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function listOpenAIModels(apiKeys) {
+  const { openaiApiKey } = apiKeys;
+  if (!openaiApiKey) {
+    throw new Error('OpenAI APIキーを入力してください');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/models', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${openaiApiKey}`
+    }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json();
+  return (result.data || [])
+    .filter(m => m.id.includes('gpt-'))
+    .map(m => ({ id: m.id, name: m.id }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function listAnthropicModels(apiKeys) {
+  const { anthropicApiKey } = apiKeys;
+  if (!anthropicApiKey) {
+    throw new Error('Anthropic APIキーを入力してください');
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/models', {
+    method: 'GET',
+    headers: {
+      'x-api-key': anthropicApiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Anthropic API error: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json();
+  return (result.data || [])
+    .map(m => ({ id: m.id, name: m.display_name || m.id }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

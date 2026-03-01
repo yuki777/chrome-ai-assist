@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { startMessageLoop, writeMessage } from './native-protocol.js';
-import { callTool } from './mcp-bridge.js';
+import { callTool, configureCredentials } from './mcp-bridge.js';
 
 const log = (msg) => process.stderr.write(`[host] ${new Date().toISOString()} ${msg}\n`);
 
@@ -32,6 +32,11 @@ async function handle(msg) {
   try {
     if (msg?.type === 'ping') {
       return reply(id, { ok: true, result: { pong: true } });
+    }
+
+    if (msg?.type === 'configure') {
+      const affected = await configureCredentials(msg.credentials);
+      return reply(id, { ok: true, result: { configured: affected } });
     }
 
     if (msg?.type === 'list_tools') {

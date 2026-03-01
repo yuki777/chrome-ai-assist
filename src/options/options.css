@@ -216,6 +216,41 @@ body {
   line-height: 1.4;
 }
 
+/* Model Select Row */
+.model-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select-row select {
+  flex: 1;
+}
+
+.fetch-models-btn {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.fetch-models-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.fetch-models-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
 /* Model Info */
 .model-info {
   display: flex;

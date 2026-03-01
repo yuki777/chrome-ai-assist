@@ -125,11 +125,11 @@ PoCでは最小でよい。
 起動コマンド例:
 - backlog
   - command: `npx`
-  - args: `["-y", "https://github.com/shueisha-arts-and-digital/backlog-mcp-server"]`
+  - args: `["-y", "backlog-mcp-server", "--dynamic-toolsets"]`
   - env: `BACKLOG_DOMAIN`, `BACKLOG_API_KEY`
 - docbase
   - command: `npx`
-  - args: `["-y", "https://github.com/shueisha-arts-and-digital/docbase-mcp-server"]`
+  - args: `["-y", "github:shueisha-arts-and-digital/docbase-mcp-server"]`
   - env: `DOCBASE_DOMAIN`, `DOCBASE_API_TOKEN`
 
 ## 7.3 Native Host 本体

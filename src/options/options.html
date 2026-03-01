@@ -77,23 +77,25 @@
               </label>
             </div>
 
-            <div class="form-group">
-              <label for="awsAccessKey">AWS Access Key</label>
-              <input type="password" id="awsAccessKey" />
-            </div>
+            <div id="awsCredentialsGroup">
+              <div class="form-group">
+                <label for="awsAccessKey">AWS Access Key</label>
+                <input type="password" id="awsAccessKey" />
+              </div>
 
-            <div class="form-group">
-              <label for="awsSecretKey">AWS Secret Key</label>
-              <input type="password" id="awsSecretKey" />
-            </div>
+              <div class="form-group">
+                <label for="awsSecretKey">AWS Secret Key</label>
+                <input type="password" id="awsSecretKey" />
+              </div>
 
-            <div class="form-group">
-              <label for="awsSessionToken">AWS Session Token</label>
-              <input
-                type="password"
-                id="awsSessionToken"
-                placeholder="Enter Session Token..."
-              />
+              <div class="form-group">
+                <label for="awsSessionToken">AWS Session Token</label>
+                <input
+                  type="password"
+                  id="awsSessionToken"
+                  placeholder="Enter Session Token..."
+                />
+              </div>
             </div>
 
             <div class="form-group">
@@ -145,41 +147,14 @@
 
             <div class="form-group">
               <label for="bedrockModel">Model</label>
-              <select id="bedrockModel">
-                <option value="us.anthropic.claude-opus-4-6-v1:0">
-                  Claude Opus 4.6 (us.anthropic.claude-opus-4-6-v1:0)
-                </option>
-                <option value="us.anthropic.claude-sonnet-4-6-v1:0">
-                  Claude Sonnet 4.6 (us.anthropic.claude-sonnet-4-6-v1:0)
-                </option>
-              </select>
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="enableExtendedThinking" />
-                <span>Enable extended thinking</span>
-              </label>
-            </div>
-
-            <div class="budget-section">
-              <label for="budget"
-                >Budget: <span id="budgetValue">3,624</span> tokens</label
-              >
-              <div class="budget-slider">
-                <input
-                  type="range"
-                  id="budgetSlider"
-                  min="1000"
-                  max="10000"
-                  value="3624"
-                />
-              </div>
-              <div class="budget-help">
-                Higher budgets may allow you to achieve more comprehensive and
-                nuanced reasoning
+              <div class="model-select-row">
+                <select id="bedrockModel">
+                  <option value="">認証情報を入力後「モデル取得」を押してください</option>
+                </select>
+                <button type="button" class="fetch-models-btn" data-provider="bedrock">モデル取得</button>
               </div>
             </div>
+
           </section>
 
           <!-- OpenAI Configuration -->
@@ -199,10 +174,12 @@
 
             <div class="form-group">
               <label for="openaiModel">Model</label>
-              <select id="openaiModel">
-                <option value="gpt-4.1">gpt-4.1</option>
-                <option value="gpt-4o">gpt-4o</option>
-              </select>
+              <div class="model-select-row">
+                <select id="openaiModel">
+                  <option value="">APIキーを入力後「モデル取得」を押してください</option>
+                </select>
+                <button type="button" class="fetch-models-btn" data-provider="openai">モデル取得</button>
+              </div>
             </div>
           </section>
 
@@ -217,25 +194,6 @@
               <input type="password" id="anthropicApiKey" />
             </div>
 
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="useCustomBaseUrl" />
-                <span>Use custom base URL</span>
-              </label>
-            </div>
-
-            <div
-              class="form-group"
-              id="customBaseUrlGroup"
-              style="display: none"
-            >
-              <input
-                type="text"
-                id="customBaseUrl"
-                placeholder="Default: https://api.anthropic.com"
-              />
-            </div>
-
             <div class="info-text">
               This key is stored locally and only used to make API requests from
               this extension.
@@ -243,40 +201,11 @@
 
             <div class="form-group">
               <label for="anthropicModel">Model</label>
-              <select id="anthropicModel">
-                <option value="claude-opus-4-6">
-                  claude-opus-4-6
-                </option>
-                <option value="claude-sonnet-4-6">
-                  claude-sonnet-4-6
-                </option>
-              </select>
-            </div>
-
-            <div class="checkbox-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="anthropicExtendedThinking" />
-                <span>Enable extended thinking</span>
-              </label>
-            </div>
-
-            <div class="budget-section">
-              <label for="anthropicBudget"
-                >Budget:
-                <span id="anthropicBudgetValue">3,624</span> tokens</label
-              >
-              <div class="budget-slider">
-                <input
-                  type="range"
-                  id="anthropicBudgetSlider"
-                  min="1000"
-                  max="10000"
-                  value="3624"
-                />
-              </div>
-              <div class="budget-help">
-                Higher budgets may allow you to achieve more comprehensive and
-                nuanced reasoning
+              <div class="model-select-row">
+                <select id="anthropicModel">
+                  <option value="">APIキーを入力後「モデル取得」を押してください</option>
+                </select>
+                <button type="button" class="fetch-models-btn" data-provider="anthropic">モデル取得</button>
               </div>
             </div>
           </section>
@@ -291,6 +220,46 @@
               These instructions are added to the end of the system prompt sent
               with every request.
             </div>
+          </div>
+        </section>
+
+        <!-- MCP Integration Settings -->
+        <section class="config-section">
+          <h2>MCP連携設定</h2>
+
+          <div class="form-group">
+            <label for="backlogDomain">Backlog ドメイン</label>
+            <input
+              type="text"
+              id="backlogDomain"
+              placeholder="example.backlog.jp"
+            />
+          </div>
+          <div class="form-group">
+            <label for="backlogApiKey">Backlog API Key</label>
+            <input type="password" id="backlogApiKey" />
+          </div>
+
+          <div class="form-group">
+            <label for="docbaseDomain">DocBase ドメイン</label>
+            <div style="display:flex;align-items:center;gap:4px">
+              <input
+                type="text"
+                id="docbaseDomain"
+                placeholder="example"
+                style="flex:1"
+              />
+              <span style="white-space:nowrap;color:var(--text-secondary,#888)">.docbase.io</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="docbaseApiToken">DocBase API Token</label>
+            <input type="password" id="docbaseApiToken" />
+          </div>
+
+          <div class="info-text">
+            ここで設定した認証情報は Native Messaging 経由で MCP
+            サーバーに渡されます。MCP連携を使用するには各サービスの認証情報を入力してください。
           </div>
         </section>
 

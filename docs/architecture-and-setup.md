@@ -11,8 +11,9 @@
 │  │ Script   │               │  sidebar.js       │   │
 │  │          │               │  - Chat UI        │   │
 │  │ ページ   │               │  - DocBase自動取得 │   │
-│  │ コンテンツ│               │  - 履歴・Star管理  │   │
-│  │ 抽出     │               └────────┬─────────┘   │
+│  │ コンテンツ│               │  - Backlog自動取得 │   │
+│  │ 抽出     │               │  - 履歴・Star管理  │   │
+│  │          │               └────────┬─────────┘   │
 │  └──────────┘                        │              │
 │                      chrome.runtime.sendMessage     │
 │                                      │              │
@@ -64,8 +65,8 @@
 | ファイル | 役割 |
 |---------|------|
 | `manifest.json` | Manifest V3。`nativeMessaging` 権限を含む |
-| `src/content/content.js` | ページコンテンツ抽出、DocBaseリンクID抽出、sidebar iframe作成 |
-| `src/sidebar/sidebar.js` | チャットUI、DocBase記事自動取得エンジン、履歴・Star管理 |
+| `src/content/content.js` | ページコンテンツ抽出、DocBase/BacklogリンクID抽出、sidebar iframe作成、サイドバー幅管理 |
+| `src/sidebar/sidebar.js` | チャットUI、DocBase/Backlog自動取得エンジン、履歴・Star管理 |
 | `src/sidebar/sidebar.html` | チャットUI + 進捗バー + デバッグパネル |
 | `src/background/background.js` | AI API呼び出し、Native Host接続管理、Allowlist検証 |
 | `src/options/` | API設定画面（Bedrock/OpenAI/Anthropic） |
@@ -87,7 +88,7 @@ Native Host から `npx` 経由で stdio で起動される。
 
 | サーバ | 起動コマンド | 必要な環境変数 |
 |--------|-------------|---------------|
-| Backlog | `npx -y github:shueisha-arts-and-digital/backlog-mcp-server` | `BACKLOG_DOMAIN`, `BACKLOG_API_KEY` |
+| Backlog | `npx -y backlog-mcp-server --dynamic-toolsets` | `BACKLOG_DOMAIN`, `BACKLOG_API_KEY` |
 | DocBase | `npx -y github:shueisha-arts-and-digital/docbase-mcp-server` | `DOCBASE_DOMAIN`, `DOCBASE_API_TOKEN` |
 
 ## 3. データフロー
@@ -171,10 +172,43 @@ fetchDocBaseArticles()
   ▼
 rebuildSystemPrompt()
   │  chatHistory[0].content を更新
-  │  = buildBaseSystemPrompt(pageData) + 【DocBase参考記事】セクション
+  │  = buildBaseSystemPrompt(pageData) + 【DocBase参考記事】+ 【Backlog課題】セクション
   │
   │  ※ 取得中にユーザーがメッセージ送信しても、
-  │    その時点で取得済みの記事が自動的に含まれる（ブロック不要）
+  │    その時点で取得済みの記事/課題が自動的に含まれる（ブロック不要）
+```
+
+### 3.3 Backlog課題 自動取得フロー
+
+```
+ページ読み込み
+  ▼
+content.js: extractBacklogLinks()
+  │  ページURL + ページ内の全 <a> から Backlog課題キーを抽出
+  │  → pageData.backlogIssueKeys = ["PROJ-123", ...]
+  ▼
+sidebar.js: handleMessage(INIT)
+  │  initializeChat() + fetchBacklogIssues(issueKeys)
+  ▼
+fetchBacklogIssues()
+  │  Worker Pool (並列3件)
+  │  ├─ Worker 1: get_issue で課題取得 → 子課題を探索 → queueに追加
+  │  ├─ Worker 2: get_issue で課題取得 → ...
+  │  └─ Worker 3: get_issue で課題取得 → ...
+  │
+  │  各取得完了時:
+  │    1. backlogIssues[] に追加
+  │    2. rebuildSystemPrompt() でシステムプロンプト更新
+  │    3. updateBacklogProgress() で進捗UI更新
+  │
+  │  子課題探索:
+  │    - get_issues (parentIssueId フィルタ) で子課題一覧を取得
+  │    - 未取得の子課題をキューに追加
+  │
+  │  停止条件:
+  │    - 全課題取得完了
+  │    - 合計文字数が 200,000文字を超過
+  │    - 新しいページでfetchが再開（generation管理で旧fetch無効化）
 ```
 
 ## 4. セキュリティ
@@ -184,13 +218,13 @@ rebuildSystemPrompt()
 ```
 Layer 1: background.js (Chrome拡張内)
   MCP_ALLOW = {
-    backlog: ['get_issue', 'get_issue_comments'],
+    backlog: ['get_issue', 'get_issue_comments', 'get_issues'],
     docbase: ['get_post']
   }
 
 Layer 2: host.js (Native Host内)
   ALLOW = {
-    backlog: ['get_issue', 'get_issue_comments'],
+    backlog: ['get_issue', 'get_issue_comments', 'get_issues'],
     docbase: ['get_post']
   }
 ```
@@ -303,6 +337,7 @@ Extension ID: xxxxxxxxxxxx
 | **DocBase: get_post テスト** | 記事内容がJSON表示 |
 
 4. DocBaseの記事ページを開くと、進捗バーが表示され記事が自動取得される
+5. Backlogの課題ページを開くと、進捗バーが表示され課題と子課題が自動取得される
 
 ## 6. トラブルシューティング
 
@@ -355,11 +390,11 @@ chrome-ai-assist/
 │   ├── background/
 │   │   └── background.js         # Service Worker + Native Host Client
 │   ├── content/
-│   │   ├── content.js            # ページ抽出 + DocBaseリンク検出
-│   │   └── content.css
+│   │   ├── content.js            # ページ抽出 + DocBase/Backlogリンク検出 + サイドバー幅管理
+│   │   └── content.css           # サイドバー幅CSS変数 + fixed要素補正
 │   ├── sidebar/
 │   │   ├── sidebar.html          # チャットUI + 進捗バー + デバッグパネル
-│   │   ├── sidebar.js            # チャット + DocBase取得エンジン + Star機能
+│   │   ├── sidebar.js            # チャット + DocBase/Backlog取得エンジン + Star機能
 │   │   └── sidebar.css
 │   └── options/
 │       ├── options.html          # API設定画面
