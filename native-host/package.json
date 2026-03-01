@@ -1,8 +1,13 @@
 {
   "name": "chrome-ai-assist-native-host",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
+  "scripts": {
+    "postinstall": "node bin/setup.js"
+  },
+  "bin": {
+    "chrome-ai-assist-native-host": "./bin/setup.js"
+  },
   "engines": {
     "node": ">=20"
   },

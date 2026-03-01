@@ -3,6 +3,7 @@
   "name": "Chrome AI Assist",
   "version": "1.0.0",
   "description": "AI assistant for current webpage content with AWS Bedrock, OpenAI, and Anthropic support",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAreDj5UXAKw6wrKwZwt0xYzYCDFADrWIs4s1epwkrxztJ/g9irx9O3RI58HZimNy3qJxVuotBzlaRL6rsRQD97romNhzzQesP3Pk8Tnp9phdcuWFS7l1OFuaRi/dOBtI4/IE4QGkfP5hHmOQH9zHpoW7rImOm5Lb37yWmEiG6YzDzn1c6CyxZfLUtLMXvq+nZ73lHhxjU5+5TLVvF5LBI0KdDdF7M9RZawsk1Oe6YAPyr41WLz/6bvPxi8BB+a15IuJ+GdI7wDhhkVQHCENXI65CSwOYziXh25XlVtklUVKGA5ByhUF4oYX1zYW1tQGEY7kTFdTR6Zlq2rnaRqrI3XwIDAQAB",
   "permissions": [
     "storage",
     "activeTab",
