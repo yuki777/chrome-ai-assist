@@ -36,6 +36,11 @@ const ENV_TO_SERVER = {
 /** Runtime env overrides from Chrome extension (takes precedence over process.env / .env) */
 const runtimeEnv = {};
 
+/** Via identifier (browser-extensionId) appended to MCP server args for process identification */
+let viaTag = '';
+
+export function setVia(tag) { viaTag = tag; }
+
 /** @type {Map<string, Client>} */
 const clients = new Map();
 
@@ -56,10 +61,13 @@ async function getClient(server) {
 
     const env = buildServerEnv(server);
 
+    const args = [...cfg.args];
+    if (viaTag) args.push(`--via`, viaTag);
+
     log(`connecting to ${server}...`);
     const transport = new StdioClientTransport({
       command: cfg.command,
-      args: cfg.args,
+      args,
       env
     });
     const client = new Client({

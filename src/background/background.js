@@ -68,6 +68,18 @@ function callNativeHost(message) {
   });
 }
 
+function detectBrowser() {
+  const ua = navigator.userAgent || '';
+  if (ua.includes('Edg/')) return 'edge';
+  if (ua.includes('Brave')) return 'brave';
+  if (ua.includes('Vivaldi')) return 'vivaldi';
+  if (ua.includes('OPR/')) return 'opera';
+  // Comet uses "Chrome/" but has a distinctive version pattern; check brand hints first
+  const brands = navigator.userAgentData?.brands?.map(b => b.brand.toLowerCase()) || [];
+  if (brands.some(b => b.includes('comet'))) return 'comet';
+  return 'chrome';
+}
+
 async function ensureMcpConfigured() {
   const { mcpCredentials } = await chrome.storage.local.get('mcpCredentials');
   const digest = JSON.stringify(mcpCredentials || {});
@@ -76,7 +88,9 @@ async function ensureMcpConfigured() {
   // Only send configure if there are any non-empty values
   const hasValues = mcpCredentials && Object.values(mcpCredentials).some(v => v);
   if (hasValues) {
-    await callNativeHost({ type: 'configure', credentials: mcpCredentials });
+    const browser = detectBrowser();
+    const extensionId = chrome.runtime.id;
+    await callNativeHost({ type: 'configure', credentials: mcpCredentials, via: `${browser}-${extensionId}` });
   }
   mcpConfigDigest = digest;
   mcpConfigured = true;
@@ -153,7 +167,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     // サイドバーを開く
     chrome.tabs.sendMessage(tab.id, { action: 'toggleSidebar' });
   } catch (e) {
-    console.error('🔴 [Background] Failed to inject content script or send message:', e);
+    console.warn('🟡 [Background] Failed to inject content script or send message:', e);
   }
 });
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { startMessageLoop, writeMessage } from './native-protocol.js';
-import { callTool, configureCredentials } from './mcp-bridge.js';
+import { callTool, configureCredentials, setVia } from './mcp-bridge.js';
 
 const log = (msg) => process.stderr.write(`[host] ${new Date().toISOString()} ${msg}\n`);
 
@@ -35,6 +35,7 @@ async function handle(msg) {
     }
 
     if (msg?.type === 'configure') {
+      if (msg.via) setVia(msg.via);
       const affected = await configureCredentials(msg.credentials);
       return reply(id, { ok: true, result: { configured: affected } });
     }
