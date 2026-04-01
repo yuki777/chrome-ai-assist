@@ -391,12 +391,85 @@ function addAIMessage(text, isLoading = false) {
       </div>
     </div>`;
   } else {
-    messageDiv.innerHTML = `<div class="message-content">${formatMessage(text)}</div>`;
+    messageDiv.innerHTML = `<div class="message-content">${formatMessage(text)}</div>
+      <button class="copy-btn" title="コピー">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>`;
+    const copyBtn = messageDiv.querySelector('.copy-btn');
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await copyText(text);
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+        setTimeout(() => {
+          if (!copyBtn.isConnected) return;
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+          </svg>`;
+        }, 1500);
+      } catch (error) {
+        console.error('🔴 [Sidebar] Failed to copy text:', error);
+      }
+    });
   }
 
   chatMessages.appendChild(messageDiv);
   scrollToBottom();
   return messageDiv;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch (error) {
+    console.warn('🟡 [Sidebar] navigator.clipboard.writeText failed, trying execCommand fallback:', error);
+  }
+
+  if (copyWithExecCommand(text)) {
+    return;
+  }
+
+  const response = await chrome.runtime.sendMessage({
+    action: 'copyToClipboard',
+    text
+  });
+
+  if (!response?.success) {
+    throw new Error(response?.error || 'clipboard copy failed');
+  }
+}
+
+function copyWithExecCommand(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.left = '-9999px';
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (error) {
+    console.warn('🟡 [Sidebar] document.execCommand("copy") failed:', error);
+  } finally {
+    textarea.remove();
+  }
+
+  return copied;
 }
 
 // Handle AI response

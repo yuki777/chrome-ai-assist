@@ -208,6 +208,7 @@ function createSidebar() {
     sidebarIframe = document.createElement('iframe');
     sidebarIframe.id = 'ai-assist-sidebar';
     sidebarIframe.src = chrome.runtime.getURL('src/sidebar/sidebar.html');
+    sidebarIframe.allow = 'clipboard-write';
     sidebarIframe.style.cssText = `
       position: fixed !important;
       top: 0 !important;

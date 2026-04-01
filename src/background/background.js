@@ -7,6 +7,8 @@ let nativePort = null;
 const mcpPending = new Map();
 let mcpConfigured = false;
 let mcpConfigDigest = '';
+const OFFSCREEN_DOCUMENT_PATH = 'src/offscreen/offscreen.html';
+let creatingOffscreenDocument = null;
 
 // Allowlist: server -> Set of allowed tools (first layer of defense)
 const MCP_ALLOW = {
@@ -80,6 +82,58 @@ function detectBrowser() {
   return 'chrome';
 }
 
+async function ensureOffscreenDocument() {
+  const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
+
+  if ('getContexts' in chrome.runtime) {
+    const contexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT'],
+      documentUrls: [offscreenUrl]
+    });
+    if (contexts.length > 0) return;
+  }
+
+  if (creatingOffscreenDocument) {
+    await creatingOffscreenDocument;
+    return;
+  }
+
+  creatingOffscreenDocument = chrome.offscreen.createDocument({
+    url: OFFSCREEN_DOCUMENT_PATH,
+    reasons: ['CLIPBOARD'],
+    justification: 'Copy assistant output to the system clipboard.'
+  });
+
+  try {
+    await creatingOffscreenDocument;
+  } catch (error) {
+    if (!error.message?.includes('single offscreen document')) throw error;
+  } finally {
+    creatingOffscreenDocument = null;
+  }
+}
+
+async function copyViaOffscreenDocument(text) {
+  await ensureOffscreenDocument();
+
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { target: 'offscreen', action: 'copyText', text },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (!response?.success) {
+          reject(new Error(response?.error || 'clipboard copy failed'));
+          return;
+        }
+        resolve();
+      }
+    );
+  });
+}
+
 async function ensureMcpConfigured() {
   const { mcpCredentials } = await chrome.storage.local.get('mcpCredentials');
   const digest = JSON.stringify(mcpCredentials || {});
@@ -141,6 +195,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'callAI') {
     handleAIRequest(request.data, sendResponse);
     return true; // Will respond asynchronously
+  }
+
+  if (request.action === 'copyToClipboard') {
+    copyViaOffscreenDocument(request.text || '')
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => sendResponse({ success: false, error: error.message }));
+    return true;
   }
 });
 
