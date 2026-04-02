@@ -1,3 +1,3 @@
 #!/bin/bash
 cd "$(dirname "$0")"
-exec /usr/bin/env node src/host.js
+exec "/Users/adachi/.vite-plus/js_runtime/node/24.14.1/bin/node" src/host.js

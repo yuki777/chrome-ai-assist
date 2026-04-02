@@ -56,7 +56,10 @@ try {
 
 const manifest = template.replace(/__HOST_PATH__/g, hostPath);
 
-// 3. Make run-host.sh executable
+// 3. Generate run-host.sh with absolute node path (Chrome GUI apps have minimal PATH)
+const nodePath = process.execPath;
+const runHostScript = `#!/bin/bash\ncd "$(dirname "$0")"\nexec "${nodePath}" src/host.js\n`;
+writeFileSync(hostPath, runHostScript);
 chmodSync(hostPath, 0o755);
 
 // 4. Detect installed browsers and place manifest

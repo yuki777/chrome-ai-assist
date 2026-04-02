@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -108,7 +109,10 @@ function buildServerEnv(server) {
   for (const k of cfg.env) {
     if (!runtimeEnv[k]) throw new Error(`missing env: ${k} (set in Chrome extension options)`);
   }
-  return { ...process.env, ...runtimeEnv };
+  const nodeDir = path.dirname(process.execPath);
+  const env = { ...process.env, ...runtimeEnv };
+  env.PATH = `${nodeDir}:${env.PATH || '/usr/bin:/bin:/usr/sbin:/sbin'}`;
+  return env;
 }
 
 /**
